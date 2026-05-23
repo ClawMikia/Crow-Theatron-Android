@@ -56,17 +56,16 @@ class CrowDbHelper(context: Context) :
     fun insertOrMergeFromScan(entity: VideoEntity): Long {
         val db = writableDatabase
         val existingId = getIdByUri(entity.uriString)
-        if (existingId == null) {
-            return db.insert(TABLE_VIDEOS, null, entity.toContentValues())
-        }
-        val cv = ContentValues().apply {
-            put(COL_TITLE, entity.title)
-            put(COL_FOLDER, entity.folderGroup)
-            put(COL_DURATION_MS, entity.durationMs)
-            put(COL_SIZE_BYTES, entity.sizeBytes)
-        }
-        db.update(TABLE_VIDEOS, cv, "$COL_ID = ?", arrayOf(existingId.toString()))
-        return existingId
+        return existingId?.let { id ->
+            val cv = ContentValues().apply {
+                put(COL_TITLE, entity.title)
+                put(COL_FOLDER, entity.folderGroup)
+                put(COL_DURATION_MS, entity.durationMs)
+                put(COL_SIZE_BYTES, entity.sizeBytes)
+            }
+            db.update(TABLE_VIDEOS, cv, "$COL_ID = ?", arrayOf(id.toString()))
+            id
+        } ?: db.insert(TABLE_VIDEOS, null, entity.toContentValues())
     }
 
     fun getIdByUri(uriString: String): Long? {
@@ -92,6 +91,8 @@ class CrowDbHelper(context: Context) :
 
     fun updatePreferences(entity: VideoEntity) {
         val cv = ContentValues().apply {
+            put(COL_TITLE, entity.title)
+            put(COL_DURATION_MS, entity.durationMs)
             put(COL_PITCH_SEMITONES, entity.pitchSemitones)
             put(COL_TRIM_START_MS, entity.trimStartMs)
             put(COL_TRIM_END_MS, entity.trimEndMs)
@@ -477,13 +478,17 @@ private fun VideoEntity.toContentValues(): ContentValues = ContentValues().apply
     put(CrowDbHelper.COL_ACTIVE_PROFILE,   activeProfileId)
 }
 
-private fun android.database.Cursor.toEntity(): VideoEntity {
+private fun Cursor.toEntity(): VideoEntity {
     fun str(col: String): String? = getColumnIndex(col).takeIf { it >= 0 }?.let { getString(it) }
     fun lng(col: String, def: Long = 0L): Long = getColumnIndex(col).takeIf { it >= 0 }?.let { getLong(it) } ?: def
     fun int(col: String, def: Int = 0): Int = getColumnIndex(col).takeIf { it >= 0 }?.let { getInt(it) } ?: def
     fun flt(col: String, def: Float = 0f): Float = getColumnIndex(col).takeIf { it >= 0 }?.let { getFloat(it) } ?: def
     val thumbIdx = getColumnIndex(CrowDbHelper.COL_THUMB)
-    val thumb = if (thumbIdx >= 0 && !isNull(thumbIdx)) getBlob(thumbIdx) else null
+    val thumb = if (thumbIdx >= 0 && !isNull(thumbIdx)) {
+        getBlob(thumbIdx)
+    } else {
+        null
+    }
     return VideoEntity(
         id                     = lng(CrowDbHelper.COL_ID),
         uriString              = str(CrowDbHelper.COL_URI) ?: "",

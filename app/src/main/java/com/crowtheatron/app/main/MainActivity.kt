@@ -32,14 +32,18 @@ class MainActivity : AppCompatActivity() {
         binding.btnPickFolder.setOnClickListener { BottomNavHelper.openFolderSelect(this) }
 
         binding.btnOpenLibrary.setOnClickListener {
-            startActivity(Intent(this, LibraryActivity::class.java)
-                .putExtra(LibraryActivity.EXTRA_MODE, LibraryActivity.MODE_ALL))
+            startActivity(
+                Intent(this, LibraryActivity::class.java)
+                    .putExtra(LibraryActivity.EXTRA_MODE, LibraryActivity.MODE_ALL)
+            )
         }
 
         // Continue Watching quick tile
         binding.btnContinueWatching.setOnClickListener {
-            startActivity(Intent(this, LibraryActivity::class.java)
-                .putExtra(LibraryActivity.EXTRA_MODE, LibraryActivity.MODE_CONTINUE))
+            startActivity(
+                Intent(this, LibraryActivity::class.java)
+                    .putExtra(LibraryActivity.EXTRA_MODE, LibraryActivity.MODE_CONTINUE)
+            )
         }
 
         binding.btnResetLibrary.setOnClickListener {

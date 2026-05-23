@@ -4,8 +4,8 @@ import java.util.Locale
 
 object FormatUtils {
     fun formatDuration(ms: Long): String {
-        if (ms <= 0L) return "—"
-        val s = ms / 1000L
+        val absMs = if (ms < 0) 0 else ms
+        val s = absMs / 1000L
         val h = s / 3600L
         val m = (s % 3600L) / 60L
         val sec = s % 60L

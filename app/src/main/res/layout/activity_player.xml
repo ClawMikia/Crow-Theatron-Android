@@ -31,7 +31,9 @@
                 android:id="@+id/playerSurface"
                 android:layout_width="match_parent"
                 android:layout_height="220dp"
-                android:background="@color/crow_pure_black">
+                android:background="@color/crow_pure_black"
+                android:clipChildren="true"
+                android:clipToPadding="true">
 
                 <androidx.media3.ui.PlayerView
                     android:id="@+id/playerView"
@@ -848,6 +850,7 @@
                         android:id="@+id/seekTrimStart"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:max="1000"
                         android:progressBackgroundTint="@color/crow_seekbar_bg"
                         android:progressTint="@color/crow_accent_blue"
                         android:thumb="@drawable/seekbar_thumb_blue" />
@@ -878,6 +881,7 @@
                         android:id="@+id/seekTrimEnd"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:max="1000"
                         android:progressBackgroundTint="@color/crow_seekbar_bg"
                         android:progressTint="@color/crow_accent_red"
                         android:thumb="@drawable/seekbar_thumb_red" />
@@ -905,6 +909,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:layout_marginRight="15dp"
                             android:orientation="vertical">
 
                             <!-- Start fine-tune row -->

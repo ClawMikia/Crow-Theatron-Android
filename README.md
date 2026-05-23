@@ -129,7 +129,7 @@ CrowTheatron/
 
 ### Build Configuration
 
-The project uses modern Android Gradle configuration with Kotlin DSL. Key requirements:
+The project uses modern Android Gradle configuration with Kotlin DSL and Version Catalogs. Key requirements:
 - **Compile SDK**: 36
 - **Min SDK**: 26 (Android 8.0)
 - **Target SDK**: 36 (Android 14)
@@ -138,13 +138,22 @@ The project uses modern Android Gradle configuration with Kotlin DSL. Key requir
 
 ### Dependencies
 
-Key dependencies include:
-- **ExoPlayer (Media3)**: Advanced media playback
-- **AndroidX Libraries**: Core Android components
-- **Material Design**: UI components and theming
-- **Kotlin Coroutines**: Asynchronous programming
-- **Lifecycle Components**: Android lifecycle management
-- **DocumentFile**: File system access
+Managed via `gradle/libs.versions.toml`:
+- **ExoPlayer (Media3)**: Advanced media playback (1.5.1)
+- **AndroidX Core KTX**: 1.17.0
+- **AndroidX AppCompat**: 1.7.1
+- **Material Design 3**: 1.13.0
+- **Kotlin Coroutines**: 1.9.0
+- **Lifecycle Components**: 2.8.7
+- **CoordinatorLayout**: 1.3.0
+- **DocumentFile**: 1.1.0
+
+## Recent Improvements
+
+- **Dependency Management**: Migrated all dependencies to Gradle Version Catalogs for better maintenance and security.
+- **Code Quality**: Performed a sweep of warnings and fixed redundant qualifiers and inefficient logic in database operations.
+- **Project Structure**: Cleaned up `.gitignore` to follow modern Android development standards.
+- **Stability**: Updated to the latest stable versions of core libraries.
 
 ## Database Schema
 

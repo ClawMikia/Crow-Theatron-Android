@@ -59,7 +59,7 @@ dependencies {
     // Document file (folder picker)
     implementation(libs.androidx.documentfile)
     // CoordinatorLayout (used in player layout)
-    implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
+    implementation(libs.androidx.coordinatorlayout)
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -86,8 +86,33 @@ class PlayerActivity : AppCompatActivity() {
     private val serviceConn = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             val lb = binder as PlaybackService.LocalBinder
-            playbackService = lb.getService()
+            val service = lb.getService()
+            playbackService = service
             serviceBound = true
+            
+            val sharedPlayer = service.getPlayer()
+            if (sharedPlayer != null) {
+                sharedPlayer.removeListener(playerListener)
+                player = sharedPlayer
+                sharedPlayer.addListener(playerListener)
+                binding.playerView.player = sharedPlayer
+                
+                val currentMedia = sharedPlayer.currentMediaItem
+                val workingUri = working.contentUri.toString()
+                
+                if (currentMedia == null || currentMedia.localConfiguration?.uri?.toString() != workingUri) {
+                    attachCurrentMedia(play = true)
+                } else {
+                    isBindingUi = true
+                    try {
+                        bindUiFromWorking()
+                        updatePlayPauseIcon()
+                        tickTimeline()
+                    } finally {
+                        isBindingUi = false
+                    }
+                }
+            }
         }
         override fun onServiceDisconnected(name: ComponentName) {
             serviceBound = false
@@ -107,31 +132,48 @@ class PlayerActivity : AppCompatActivity() {
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(state: Int) {
             playerReady = state == Player.STATE_READY || state == Player.STATE_BUFFERING
+            
             if (state == Player.STATE_READY) {
-                isBindingUi = true; bindTrimSeekers(); isBindingUi = false
-                tickTimeline()
-                applyZoom(working.zoomLevel)
-            }
-            if (state == Player.STATE_ENDED) {
-                binding.seekPlayback.progress = 0
-                updateTimeLabel(0L, liveDurationMs())
-                if (binding.switchLoop.isChecked) {
-                    player?.seekTo(working.trimStartMs.coerceAtLeast(0L))
-                    player?.play()
-                } else if (binding.switchAutoNext.isChecked) {
-                    playAdjacent(1)
+                val contentDur = player?.contentDuration ?: C.TIME_UNSET
+                if (contentDur != C.TIME_UNSET && contentDur > 0L) {
+                    if (working.durationMs <= 0L || Math.abs(working.durationMs - contentDur) > 1000) {
+                        working = working.copy(durationMs = contentDur)
+                        persistPrefs()
+                    }
                 }
+                
+                isBindingUi = true
+                try {
+                    bindTrimSeekers()
+                } finally {
+                    isBindingUi = false
+                }
+                
+                applyPitchAndSpeed(working.pitchSemitones, currentSpeed)
+                applyZoom(working.zoomLevel)
+                tickTimeline()
+            }
+            
+            if (state == Player.STATE_ENDED) {
+                handleTrimEndReached()
             }
             updatePlayPauseIcon()
             updateServiceNotification()
         }
+        
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             updatePlayPauseIcon()
+            if (isPlaying) tickTimeline()
         }
+
         override fun onPlayerError(error: PlaybackException) {
             Toast.makeText(this@PlayerActivity,
                 "Playback error: ${error.message ?: "code ${error.errorCode}"}",
                 Toast.LENGTH_LONG).show()
+            // If error is clipping related or source related, try to re-attach without clipping
+            if (error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED) {
+                attachCurrentMedia(play = true)
+            }
         }
     }
 
@@ -248,41 +290,58 @@ class PlayerActivity : AppCompatActivity() {
     // ── Player setup ──────────────────────────────────────────────────────────
 
     private fun initPlayerIfNeeded() {
-        if (player != null) return
-        val exo = ExoPlayer.Builder(this).build()
-        exo.addListener(playerListener)
-        player = exo
-        binding.playerView.player = exo
-        attachCurrentMedia(play = true)
+        // We now rely entirely on the service player to avoid decoder contention
+        // and ensure background playback works correctly.
+        if (player == null && serviceBound) {
+            val sharedPlayer = playbackService?.getPlayer()
+            if (sharedPlayer != null) {
+                player = sharedPlayer
+                sharedPlayer.addListener(playerListener)
+                binding.playerView.player = sharedPlayer
+                attachCurrentMedia(play = true)
+            }
+        }
     }
 
     private fun mediaItemFor(e: VideoEntity): MediaItem {
-        val builder = MediaItem.Builder().setUri(e.contentUri)
-        val endMs = e.trimEndMs
-        if (endMs > 0L && endMs > e.trimStartMs) {
-            builder.setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder()
-                    .setEndPositionMs(endMs)
-                    .build()
-            )
-        }
-        return builder.build()
+        // We completely remove ClippingConfiguration to prevent IllegalClippingException
+        // which occurs on many MP4/progressive containers. Trimming is now handled
+        // manually in tickTimeline and attachCurrentMedia.
+        return MediaItem.Builder()
+            .setUri(e.contentUri)
+            .setMediaId(e.id.toString())
+            .build()
     }
 
     private fun attachCurrentMedia(play: Boolean) {
         val exo = player ?: return
-        playerReady = false
-        exo.stop()
-        exo.setMediaItem(mediaItemFor(working))
-        exo.prepare()
+        
+        val item = mediaItemFor(working)
+        val currentUri = exo.currentMediaItem?.localConfiguration?.uri?.toString()
+        val newUri = item.localConfiguration?.uri?.toString()
+        
+        // Only reset the media item if the URI has actually changed
+        if (currentUri != newUri) {
+            exo.stop()
+            exo.clearMediaItems()
+            exo.setMediaItem(item)
+            exo.prepare()
+            
+            val startMs = working.trimStartMs.coerceAtLeast(0L)
+            val resumePos = if (working.positionMs > startMs) working.positionMs else startMs
+            if (resumePos > 0L) exo.seekTo(resumePos)
+        }
+        
+        // Always apply current parameters
         applyPitchAndSpeed(working.pitchSemitones, currentSpeed)
         exo.volume = currentVolume * working.audioBoost.coerceIn(1f, 2f)
-        exo.repeatMode = if (working.loopPlayback) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+        exo.repeatMode = Player.REPEAT_MODE_OFF
         exo.playWhenReady = play
-        binding.playerView.postDelayed({ applyEnhancementMatrix() }, 120L)
+        
+        binding.playerView.postDelayed({ applyEnhancementMatrix() }, 150L)
         updatePlayPauseIcon()
-        playbackService?.updateNotification(working.title,
-            if (play) "Playing" else "Paused")
+        bindUiFromWorking()
+        playbackService?.updateNotification(working.title, if (play) "Playing" else "Paused")
     }
 
     private fun applyPitchAndSpeed(semitones: Int, speed: Float) {
@@ -360,12 +419,11 @@ class PlayerActivity : AppCompatActivity() {
                 val dy = abs(distY)
 
                 if (dx > dy) {
-                    val dur = liveDurationMs()
-                    val seekDeltaMs = (-distX / screenWidth * dur * 0.3f).toLong()
                     val exo = player ?: return false
-                    val newPos = (exo.currentPosition + seekDeltaMs)
-                        .coerceIn(working.trimStartMs.coerceAtLeast(0L),
-                            if (working.trimEndMs > 0L) working.trimEndMs else dur)
+                    val dur = exo.duration
+                    if (dur == C.TIME_UNSET || dur <= 0L) return false
+                    val seekDeltaMs = (-distX / screenWidth * dur * 0.3f).toLong()
+                    val newPos = (exo.currentPosition + seekDeltaMs).coerceIn(0L, dur)
                     exo.seekTo(newPos)
                     showGestureHint(FormatUtils.formatDuration(newPos))
                 } else {
@@ -422,7 +480,11 @@ class PlayerActivity : AppCompatActivity() {
         return if (d != C.TIME_UNSET && d > 0L) d else working.durationMs.takeIf { it > 0L } ?: 1L
     }
 
-    private fun metaDurationMs(): Long = working.durationMs.takeIf { it > 0L } ?: 1L
+    private fun metaDurationMs(): Long {
+        val contentDur = player?.contentDuration ?: C.TIME_UNSET
+        if (contentDur != C.TIME_UNSET && contentDur > 0L) return contentDur
+        return working.durationMs.takeIf { it > 0L } ?: 1L
+    }
 
     // ── Timeline ──────────────────────────────────────────────────────────────
 
@@ -431,10 +493,31 @@ class PlayerActivity : AppCompatActivity() {
         val dur = exo.duration
         if (dur == C.TIME_UNSET || dur <= 0L) return
         val pos = exo.currentPosition
+        
+        // Manual Trim End Check
+        if (working.trimEndMs > 0L && pos >= working.trimEndMs) {
+            handleTrimEndReached()
+            return
+        }
+
         val progress = ((pos * 1000L) / dur).toInt().coerceIn(0, 1000)
         if (!userScrubbingPlayback) binding.seekPlayback.progress = progress
         updateTimeLabel(pos, dur)
         checkChapterTransitions(pos)
+        updatePlayPauseIcon()
+    }
+
+    private fun handleTrimEndReached() {
+        val exo = player ?: return
+        if (binding.switchLoop.isChecked) {
+            exo.seekTo(working.trimStartMs.coerceAtLeast(0L))
+            exo.play()
+        } else {
+            exo.pause()
+            if (binding.switchAutoNext.isChecked) {
+                playAdjacent(1)
+            }
+        }
     }
 
     private fun updateTimeLabel(absPos: Long, dur: Long) {
@@ -466,38 +549,43 @@ class PlayerActivity : AppCompatActivity() {
     // ── UI binding ────────────────────────────────────────────────────────────
 
     private fun bindUiFromWorking() {
-        isBindingUi = true
-        binding.toolbar.title   = working.title
-        binding.videoTitle.text = working.title
-        val semis = working.pitchSemitones.coerceIn(-6, 6)
-        binding.seekPitch.progress    = semis + 6
-        binding.pitchLabel.text       = pitchLabel(semis)
-        binding.seekSpeed.progress    = speedToProgress(currentSpeed)
-        binding.tvSpeedValue.text     = speedLabel(currentSpeed)
-        binding.seekVolume.progress   = (currentVolume * 100).toInt()
-        binding.tvVolumeValue.text    = "${(currentVolume * 100).toInt()}%"
-        binding.switchAutoNext.isChecked = working.autoPlayNext
-        binding.switchLoop.isChecked     = working.loopPlayback
-        binding.btnFavorite.text = getString(
-            if (working.favorite) R.string.favorite_off else R.string.favorite_on
-        )
-        val idx = EnhancementMode.entries.indexOf(working.enhancement).coerceAtLeast(0)
-        binding.spinnerEnhancement.setSelection(idx)
-        bindTrimSeekers()
-        updateTimeLabel(working.positionMs.coerceAtLeast(0L), metaDurationMs())
-        isBindingUi = false
+        try {
+            isBindingUi = true
+            binding.toolbar.title   = working.title
+            binding.videoTitle.text = working.title
+            val semis = working.pitchSemitones.coerceIn(-6, 6)
+            binding.seekPitch.progress    = semis + 6
+            binding.pitchLabel.text       = pitchLabel(semis)
+            binding.seekSpeed.progress    = speedToProgress(currentSpeed)
+            binding.tvSpeedValue.text     = speedLabel(currentSpeed)
+            binding.seekVolume.progress   = (currentVolume * 100).toInt()
+            binding.tvVolumeValue.text    = "${(currentVolume * 100).toInt()}%"
+            binding.switchAutoNext.isChecked = working.autoPlayNext
+            binding.switchLoop.isChecked     = working.loopPlayback
+            binding.btnFavorite.text = getString(
+                if (working.favorite) R.string.favorite_off else R.string.favorite_on
+            )
+            val idx = EnhancementMode.entries.indexOf(working.enhancement).coerceAtLeast(0)
+            binding.spinnerEnhancement.setSelection(idx)
+            bindTrimSeekers()
+            updateTimeLabel(working.positionMs.coerceAtLeast(0L), metaDurationMs())
+        } finally {
+            isBindingUi = false
+        }
     }
 
     private fun bindTrimSeekers() {
-        val full = max(metaDurationMs(), 1L)
-        binding.seekTrimStart.progress =
-            ((working.trimStartMs * 1000L) / full).toInt().coerceIn(0, 1000)
-        binding.seekTrimEnd.progress =
-            if (working.trimEndMs <= 0L) 1000
-            else ((working.trimEndMs * 1000L) / full).toInt().coerceIn(0, 1000)
-        binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(working.trimStartMs)}"
-        val endMs = if (working.trimEndMs <= 0L) full else working.trimEndMs
-        binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(endMs)}"
+        try {
+            val full = max(metaDurationMs(), 1L)
+            binding.seekTrimStart.progress =
+                ((working.trimStartMs * 1000L) / full).toInt().coerceIn(0, 1000)
+            binding.seekTrimEnd.progress =
+                if (working.trimEndMs <= 0L) 1000
+                else ((working.trimEndMs * 1000L) / full).toInt().coerceIn(0, 1000)
+            binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(working.trimStartMs)}"
+            val endMs = if (working.trimEndMs <= 0L) full else working.trimEndMs
+            binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(endMs)}"
+        } catch (_: Exception) {}
     }
 
     private fun setupEnhancementSpinner() {
@@ -575,10 +663,9 @@ class PlayerActivity : AppCompatActivity() {
             override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (!fromUser || isBindingUi) return
                 val exo = player ?: return
-                val dur = liveDurationMs()
-                val trimLo  = working.trimStartMs.coerceAtLeast(0L)
-                val trimHi  = if (working.trimEndMs > 0L) working.trimEndMs else dur
-                val seekTo  = (dur * progress / 1000L).coerceIn(trimLo, trimHi)
+                val dur = exo.duration
+                if (dur == C.TIME_UNSET || dur <= 0L) return
+                val seekTo = (dur * progress / 1000L)
                 exo.seekTo(seekTo)
                 updateTimeLabel(seekTo, dur)
             }
@@ -642,14 +729,31 @@ class PlayerActivity : AppCompatActivity() {
                 val ms = p * metaDurationMs() / 1000L
                 binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(ms)}"
             },
-            onStop = { if (!isBindingUi) { readTrimFromSeekBars(); persistPrefs() } }
+            onStop = { 
+                if (!isBindingUi) { 
+                    readTrimFromSeekBars()
+                    persistPrefs()
+                    // Don't re-attach media, just sync the current position if it's now before the new start
+                    val exo = player ?: return@seekBarListener
+                    if (exo.currentPosition < working.trimStartMs) {
+                        exo.seekTo(working.trimStartMs)
+                    }
+                } 
+            }
         ))
         binding.seekTrimEnd.setOnSeekBarChangeListener(seekBarListener(
             onChange = { p, _ ->
                 val ms = p * metaDurationMs() / 1000L
                 binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(ms)}"
             },
-            onStop = { if (!isBindingUi) { readTrimFromSeekBars(); persistPrefs() } }
+            onStop = { 
+                if (!isBindingUi) { 
+                    readTrimFromSeekBars()
+                    persistPrefs()
+                    // Don't re-attach media, tick will handle the end reach logic
+                    tickTimeline()
+                } 
+            }
         ))
 
         binding.btnTrimStartMinus.setOnClickListener {
@@ -659,6 +763,7 @@ class PlayerActivity : AppCompatActivity() {
             binding.seekTrimStart.progress = (newMs * 1000L / full).toInt()
             binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(newMs)}"
             readTrimFromSeekBars(); persistPrefs()
+            if ((player?.currentPosition ?: 0L) < newMs) player?.seekTo(newMs)
         }
         binding.btnTrimStartPlus.setOnClickListener {
             val full = metaDurationMs()
@@ -667,6 +772,7 @@ class PlayerActivity : AppCompatActivity() {
             binding.seekTrimStart.progress = (newMs * 1000L / full).toInt()
             binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(newMs)}"
             readTrimFromSeekBars(); persistPrefs()
+            if ((player?.currentPosition ?: 0L) < newMs) player?.seekTo(newMs)
         }
         binding.btnTrimEndMinus.setOnClickListener {
             val full = metaDurationMs()
@@ -675,6 +781,7 @@ class PlayerActivity : AppCompatActivity() {
             binding.seekTrimEnd.progress = (newMs * 1000L / full).toInt()
             binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(newMs)}"
             readTrimFromSeekBars(); persistPrefs()
+            tickTimeline()
         }
         binding.btnTrimEndPlus.setOnClickListener {
             val full = metaDurationMs()
@@ -683,6 +790,7 @@ class PlayerActivity : AppCompatActivity() {
             binding.seekTrimEnd.progress = (newMs * 1000L / full).toInt()
             binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(newMs)}"
             readTrimFromSeekBars(); persistPrefs()
+            tickTimeline()
         }
         binding.btnTrimReset.setOnClickListener {
             working = working.copy(trimStartMs = 0L, trimEndMs = 0L)
@@ -690,6 +798,7 @@ class PlayerActivity : AppCompatActivity() {
             binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(0L)}"
             binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(metaDurationMs())}"
             persistPrefs()
+            tickTimeline()
         }
 
         binding.switchLoop.setOnCheckedChangeListener { _, checked ->
@@ -799,10 +908,11 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun jumpBy(deltaSec: Int) {
         val exo = player ?: return
-        val dur = liveDurationMs()
-        val trimLo = working.trimStartMs.coerceAtLeast(0L)
-        val trimHi = if (working.trimEndMs > 0L) working.trimEndMs else dur
-        val newPos = (exo.currentPosition + deltaSec * 1000L).coerceIn(trimLo, trimHi)
+        val dur = exo.duration
+        if (dur == C.TIME_UNSET || dur <= 0L) return
+        val start = working.trimStartMs.coerceAtLeast(0L)
+        val end = if (working.trimEndMs > 0L) working.trimEndMs else dur
+        val newPos = (exo.currentPosition + deltaSec * 1000L).coerceIn(start, end)
         exo.seekTo(newPos)
         persistProgress(); tickTimeline()
     }
