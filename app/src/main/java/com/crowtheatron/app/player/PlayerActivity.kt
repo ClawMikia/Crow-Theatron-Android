@@ -559,7 +559,6 @@ class PlayerActivity : AppCompatActivity() {
         binding.btnForward.setOnClickListener { jumpBy(SEEK_JUMP_SECONDS)  }
         binding.btnPrev.setOnClickListener    { playAdjacent(-1) }
         binding.btnNext.setOnClickListener    { playAdjacent(1) }
-        binding.btnFullscreen.setOnClickListener { toggleFullscreen() }
         binding.btnPip.setOnClickListener { enterPiP() }
 
         binding.btnProfiles.setOnClickListener {
@@ -844,17 +843,6 @@ class PlayerActivity : AppCompatActivity() {
             trimStartMs = start,
             trimEndMs   = if (end >= full - 250L) 0L else end,
         )
-    }
-
-    // ── Fullscreen & PiP ─────────────────────────────────────────────────────
-
-    private fun toggleFullscreen() {
-        isFullscreen = !isFullscreen
-        if (isFullscreen) {
-            enforceFullscreenLayout()
-        } else {
-            exitFullscreenLayout()
-        }
     }
 
     /**

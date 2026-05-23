@@ -128,16 +128,6 @@
                             android:textSize="11sp" />
 
                         <!-- Action buttons: Fullscreen, PiP, Chapter -->
-                        <ImageButton
-                            android:id="@+id/btnFullscreen"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:layout_marginEnd="6dp"
-                            android:background="@drawable/bg_button_outline_neutral"
-                            android:contentDescription="Fullscreen"
-                            android:padding="7dp"
-                            android:src="@android:drawable/ic_menu_zoom"
-                            android:tint="@color/crow_on_bg" />
 
                         <ImageButton
                             android:id="@+id/btnPip"
@@ -188,8 +178,8 @@
 
                         <ImageButton
                             android:id="@+id/btnPlayPause"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
                             android:background="@drawable/bg_button_outline_red"
                             android:contentDescription="@string/play"
                             android:src="@android:drawable/ic_media_play"
@@ -215,8 +205,8 @@
 
                         <ImageButton
                             android:id="@+id/btnStop"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
                             android:background="@drawable/bg_button_outline_neutral"
                             android:contentDescription="@string/stop"
                             android:padding="8dp"
