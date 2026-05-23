@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     android:background="@color/crow_bg">
 
-    <!-- ── Main scrollable content ── -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -27,7 +26,7 @@
                 app:navigationIcon="?attr/homeAsUpIndicator"
                 app:titleTextColor="@color/crow_accent_yellow" />
 
-            <!-- ── Video surface container (FrameLayout for overlays) ── -->
+            <!-- ── Video surface ── -->
             <FrameLayout
                 android:id="@+id/playerSurface"
                 android:layout_width="match_parent"
@@ -42,7 +41,6 @@
                     app:surface_type="texture_view"
                     app:use_controller="false" />
 
-                <!-- Color overlay for enhancement ambient tints -->
                 <View
                     android:id="@+id/enhancementOverlay"
                     android:layout_width="match_parent"
@@ -51,7 +49,6 @@
                     android:focusable="false"
                     android:visibility="gone" />
 
-                <!-- ── Gesture hint overlay (seek / brightness / volume) ── -->
                 <FrameLayout
                     android:id="@+id/gestureHintOverlay"
                     android:layout_width="wrap_content"
@@ -72,18 +69,99 @@
                         android:textSize="22sp"
                         android:textStyle="bold" />
                 </FrameLayout>
+            </FrameLayout>
 
-                <!-- ── Controls overlay (shown/hidden with animation) ── -->
+            <!-- Title -->
+            <TextView
+                android:id="@+id/videoTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/orbitron_bold"
+                android:paddingStart="16dp"
+                android:paddingTop="14dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/crow_on_bg"
+                android:textSize="16sp" />
+
+            <!-- ═══════════════════ MEDIA CONTROLS CARD ═══════════════════ -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/controlsOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="16dp"
+                app:cardBackgroundColor="@color/crow_surface_elevated"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
+
                 <LinearLayout
-                    android:id="@+id/controlsOverlay"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="bottom"
-                    android:background="#BB000000"
                     android:orientation="vertical"
-                    android:paddingBottom="6dp">
+                    android:padding="16dp">
 
-                    <!-- Player transport controls -->
+                    <!-- Card header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_media_play"
+                            android:tint="@color/crow_accent_red" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:letterSpacing="0.14"
+                            android:paddingStart="8dp"
+                            android:text="MEDIA CONTROLS"
+                            android:textColor="@color/crow_on_bg"
+                            android:textSize="11sp" />
+
+                        <!-- Action buttons: Fullscreen, PiP, Chapter -->
+                        <ImageButton
+                            android:id="@+id/btnFullscreen"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="6dp"
+                            android:background="@drawable/bg_button_outline_neutral"
+                            android:contentDescription="Fullscreen"
+                            android:padding="7dp"
+                            android:src="@android:drawable/ic_menu_zoom"
+                            android:tint="@color/crow_on_bg" />
+
+                        <ImageButton
+                            android:id="@+id/btnPip"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="6dp"
+                            android:background="@drawable/bg_button_outline_neutral"
+                            android:contentDescription="Picture-in-picture"
+                            android:padding="7dp"
+                            android:src="@android:drawable/ic_menu_crop"
+                            android:tint="@color/crow_accent_purple" />
+
+                        <ImageButton
+                            android:id="@+id/btnAddChapter"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_button_outline_yellow"
+                            android:contentDescription="Add chapter"
+                            android:padding="7dp"
+                            android:src="@drawable/ic_check"
+                            android:tint="@color/crow_accent_yellow" />
+                    </LinearLayout>
+
+                    <!-- Transport controls row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -92,197 +170,111 @@
 
                         <ImageButton
                             android:id="@+id/btnPrev"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="@null"
+                            android:contentDescription="Previous"
                             android:src="@android:drawable/ic_media_previous"
-                            android:tint="@color/crow_accent_yellow" />
+                            android:tint="@color/crow_on_muted" />
 
                         <ImageButton
                             android:id="@+id/btnRewind"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="@null"
+                            android:contentDescription="Rewind"
                             android:src="@android:drawable/ic_media_rew"
-                            android:tint="@color/crow_accent_cyan" />
+                            android:tint="@color/crow_on_muted" />
 
                         <ImageButton
                             android:id="@+id/btnPlayPause"
-                            android:layout_width="58dp"
-                            android:layout_height="58dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@drawable/bg_button_outline_red"
                             android:contentDescription="@string/play"
                             android:src="@android:drawable/ic_media_play"
                             android:tint="@color/crow_accent_red" />
 
                         <ImageButton
                             android:id="@+id/btnForward"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="@null"
+                            android:contentDescription="Forward"
                             android:src="@android:drawable/ic_media_ff"
-                            android:tint="@color/crow_accent_cyan" />
+                            android:tint="@color/crow_on_muted" />
 
                         <ImageButton
                             android:id="@+id/btnNext"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="@null"
+                            android:contentDescription="Next"
                             android:src="@android:drawable/ic_media_next"
-                            android:tint="@color/crow_accent_yellow" />
+                            android:tint="@color/crow_on_muted" />
 
                         <ImageButton
                             android:id="@+id/btnStop"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@drawable/bg_button_outline_neutral"
                             android:contentDescription="@string/stop"
+                            android:padding="8dp"
                             android:src="@android:drawable/ic_delete"
                             android:tint="@color/crow_on_muted" />
                     </LinearLayout>
 
-                    <!-- Inline seek bar inside overlay -->
+                    <!-- Seekbar -->
                     <SeekBar
                         android:id="@+id/seekPlayback"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginEnd="12dp"
+                        android:layout_marginTop="8dp"
                         android:max="1000"
-                        android:progressDrawable="@drawable/seek_playback_progress"
-                        android:thumbTint="@color/crow_accent_red" />
+                        android:progressBackgroundTint="@color/crow_seekbar_bg"
+                        android:progressTint="@color/crow_accent_red"
+                        android:thumb="@drawable/seekbar_thumb" />
 
-                    <!-- Time + action row -->
+                    <!-- Time row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:id="@+id/tvPlaybackTime"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0:00 / 0:00"
-                            android:textColor="@color/crow_accent_cyan"
+                            android:fontFamily="@font/orbitron_regular"
+                            android:text="0:00"
+                            android:textColor="@color/crow_on_muted"
                             android:textSize="11sp" />
 
-                        <!-- Fullscreen -->
-                        <ImageButton
-                            android:id="@+id/btnFullscreen"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="Fullscreen"
-                            android:src="@android:drawable/ic_menu_zoom"
-                            android:tint="@color/crow_on_bg" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
 
-                        <!-- PiP -->
-                        <ImageButton
-                            android:id="@+id/btnPip"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="Picture-in-picture"
-                            android:src="@android:drawable/ic_menu_crop"
-                            android:tint="@color/crow_accent_purple" />
-
-                        <!-- Chapter bookmark -->
-                        <ImageButton
-                            android:id="@+id/btnAddChapter"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="Add chapter"
-                            android:src="@android:drawable/ic_menu_add"
-                            android:tint="@color/crow_accent_green" />
+                        <TextView
+                            android:id="@+id/timeLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_regular"
+                            android:text="0:00"
+                            android:textColor="@color/crow_on_muted"
+                            android:textSize="11sp" />
                     </LinearLayout>
-                </LinearLayout>
-            </FrameLayout>
-
-            <!-- ── Title ── -->
-            <TextView
-                android:id="@+id/videoTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="16dp"
-                android:paddingTop="14dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="2dp"
-                android:textColor="@color/crow_on_bg"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/timeLabel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="6dp"
-                android:textColor="@color/crow_on_muted"
-                android:textSize="12sp" />
-
-            <!-- ── Profiles panel ── -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
-                app:cardBackgroundColor="@color/crow_surface_elevated"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="14dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="PLAYBACK PROFILES"
-                        android:textColor="@color/crow_accent_purple"
-                        android:textSize="10sp"
-                        android:letterSpacing="0.12"
-                        android:textAllCaps="true" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnProfiles"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="Manage Profiles"
-                        android:textSize="11sp"
-                        android:textColor="@color/crow_accent_purple"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:stateListAnimator="@null"
-                        app:strokeColor="@color/crow_accent_purple"
-                        app:backgroundTint="@android:color/transparent" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- ═══ TRIM WINDOW ═══ -->
+            <!-- ═══════════════════ VOLUME CARD ═══════════════════ -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
                 app:cardBackgroundColor="@color/crow_surface_elevated"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp">
@@ -291,382 +283,199 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="14dp">
+                    android:padding="16dp">
 
-                    <TextView
+                    <!-- Header -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        android:text="TRIM WINDOW"
-                        android:textColor="@color/crow_accent_yellow"
-                        android:textSize="10sp"
-                        android:letterSpacing="0.12"
-                        android:textAllCaps="true" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp"
-                        android:text="START POINT"
-                        android:textColor="@color/crow_on_muted"
-                        android:textSize="9sp"
-                        android:letterSpacing="0.1"
-                        android:textAllCaps="true" />
-
-                    <SeekBar
-                        android:id="@+id/seekTrimStart"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:max="1000"
-                        android:progressTint="@color/crow_accent_yellow"
-                        android:progressBackgroundTint="@color/crow_divider"
-                        android:thumbTint="@color/crow_accent_yellow" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:layout_marginBottom="4dp"
-                        android:text="END POINT"
-                        android:textColor="@color/crow_on_muted"
-                        android:textSize="9sp"
-                        android:letterSpacing="0.1"
-                        android:textAllCaps="true" />
-
-                    <SeekBar
-                        android:id="@+id/seekTrimEnd"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:max="1000"
-                        android:progressTint="@color/crow_accent_cyan"
-                        android:progressBackgroundTint="@color/crow_divider"
-                        android:thumbTint="@color/crow_accent_cyan" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- ═══ PITCH / KEY ═══ -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
-                app:cardBackgroundColor="@color/crow_surface_elevated"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginBottom="10dp">
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_volume"
+                            android:tint="@color/crow_accent_cyan" />
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="PITCH / KEY"
-                            android:textColor="@color/crow_accent_green"
-                            android:textSize="10sp"
-                            android:letterSpacing="0.12"
-                            android:textAllCaps="true" />
-
-                        <TextView
-                            android:id="@+id/pitchLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0 st"
-                            android:textColor="@color/crow_accent_green"
-                            android:textSize="20sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <SeekBar
-                        android:id="@+id/seekPitch"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:max="12"
-                        android:progress="6"
-                        android:progressTint="@color/crow_accent_green"
-                        android:progressBackgroundTint="@color/crow_divider"
-                        android:thumbTint="@color/crow_accent_green" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="14dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPitchDown"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="44dp"
-                            android:layout_height="36dp"
-                            android:text="−"
-                            android:textSize="20sp"
-                            android:textColor="@color/crow_accent_green"
-                            android:padding="0dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:layout_marginEnd="10dp"
-                            android:stateListAnimator="@null"
-                            app:strokeColor="@color/crow_accent_green"
-                            app:backgroundTint="@android:color/transparent" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPitchUp"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="44dp"
-                            android:layout_height="36dp"
-                            android:text="+"
-                            android:textSize="20sp"
-                            android:textColor="@color/crow_accent_green"
-                            android:padding="0dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:layout_marginEnd="14dp"
-                            android:stateListAnimator="@null"
-                            app:strokeColor="@color/crow_accent_green"
-                            app:backgroundTint="@android:color/transparent" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPitchReset"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:text="Reset to 0"
-                            android:textSize="11sp"
-                            android:textColor="@color/crow_accent_green"
-                            android:paddingStart="14dp"
-                            android:paddingEnd="14dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:stateListAnimator="@null"
-                            app:strokeColor="@color/crow_accent_green"
-                            app:backgroundTint="@android:color/transparent" />
-                    </LinearLayout>
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- ═══ PLAYBACK SPEED ═══ -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
-                app:cardBackgroundColor="@color/crow_surface_elevated"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="10dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="PLAYBACK SPEED"
-                            android:textColor="@color/crow_accent_orange"
-                            android:textSize="10sp"
-                            android:letterSpacing="0.12"
-                            android:textAllCaps="true" />
-
-                        <TextView
-                            android:id="@+id/tvSpeedValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="1.0x"
-                            android:textColor="@color/crow_accent_orange"
-                            android:textSize="20sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <SeekBar
-                        android:id="@+id/seekSpeed"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:max="30"
-                        android:progress="10"
-                        android:progressTint="@color/crow_accent_orange"
-                        android:progressBackgroundTint="@color/crow_divider"
-                        android:thumbTint="@color/crow_accent_orange" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="14dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSpeedDown"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="44dp"
-                            android:layout_height="36dp"
-                            android:text="−"
-                            android:textSize="20sp"
-                            android:textColor="@color/crow_accent_orange"
-                            android:padding="0dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:layout_marginEnd="10dp"
-                            android:stateListAnimator="@null"
-                            app:strokeColor="@color/crow_accent_orange"
-                            app:backgroundTint="@android:color/transparent" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSpeedUp"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="44dp"
-                            android:layout_height="36dp"
-                            android:text="+"
-                            android:textSize="20sp"
-                            android:textColor="@color/crow_accent_orange"
-                            android:padding="0dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:layout_marginEnd="14dp"
-                            android:stateListAnimator="@null"
-                            app:strokeColor="@color/crow_accent_orange"
-                            app:backgroundTint="@android:color/transparent" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSpeedReset"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:text="Reset to 1.0x"
-                            android:textSize="11sp"
-                            android:textColor="@color/crow_accent_orange"
-                            android:paddingStart="14dp"
-                            android:paddingEnd="14dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:stateListAnimator="@null"
-                            app:strokeColor="@color/crow_accent_orange"
-                            app:backgroundTint="@android:color/transparent" />
-                    </LinearLayout>
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- ═══ VOLUME ═══ -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
-                app:cardBackgroundColor="@color/crow_surface_elevated"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="10dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:letterSpacing="0.14"
+                            android:paddingStart="8dp"
                             android:text="VOLUME"
-                            android:textColor="@color/crow_accent_cyan"
-                            android:textSize="10sp"
-                            android:letterSpacing="0.12"
-                            android:textAllCaps="true" />
+                            android:textColor="@color/crow_on_bg"
+                            android:textSize="11sp" />
 
                         <TextView
                             android:id="@+id/tvVolumeValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="100%"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:text="100"
                             android:textColor="@color/crow_accent_cyan"
-                            android:textSize="20sp"
-                            android:textStyle="bold" />
+                            android:textSize="22sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_regular"
+                            android:text=" %"
+                            android:textColor="@color/crow_on_muted"
+                            android:textSize="11sp" />
                     </LinearLayout>
 
-                    <SeekBar
-                        android:id="@+id/seekVolume"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:max="100"
-                        android:progress="100"
-                        android:progressTint="@color/crow_accent_cyan"
-                        android:progressBackgroundTint="@color/crow_divider"
-                        android:thumbTint="@color/crow_accent_cyan" />
-
+                    <!-- Seekbar row with min/max icons -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="14dp">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-                        <com.google.android.material.button.MaterialButton
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_volume_off"
+                            android:tint="@color/crow_on_muted" />
+
+                        <SeekBar
+                            android:id="@+id/seekVolume"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1"
+                            android:max="100"
+                            android:progress="100"
+                            android:progressBackgroundTint="@color/crow_seekbar_bg"
+                            android:progressTint="@color/crow_accent_cyan"
+                            android:thumb="@drawable/seekbar_thumb_orange" />
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_volume"
+                            android:tint="@color/crow_accent_cyan" />
+                    </LinearLayout>
+
+                    <!-- Buttons: − + left, Reset right -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageButton
                             android:id="@+id/btnVolumeDown"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="44dp"
+                            android:layout_width="36dp"
                             android:layout_height="36dp"
-                            android:text="−"
-                            android:textSize="20sp"
-                            android:textColor="@color/crow_accent_cyan"
-                            android:padding="0dp"
-                            android:minWidth="0dp"
-                            android:minHeight="0dp"
-                            android:layout_marginEnd="10dp"
-                            android:stateListAnimator="@null"
-                            app:strokeColor="@color/crow_accent_cyan"
-                            app:backgroundTint="@android:color/transparent" />
+                            android:background="@drawable/bg_button_outline_cyan"
+                            android:contentDescription="Volume Down"
+                            android:padding="7dp"
+                            android:src="@drawable/ic_volume_down"
+                            android:tint="@color/crow_accent_cyan" />
 
-                        <com.google.android.material.button.MaterialButton
+                        <ImageButton
                             android:id="@+id/btnVolumeUp"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="44dp"
+                            android:layout_width="36dp"
                             android:layout_height="36dp"
-                            android:text="+"
-                            android:textSize="20sp"
-                            android:textColor="@color/crow_accent_cyan"
-                            android:padding="0dp"
-                            android:minWidth="0dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/bg_button_outline_cyan"
+                            android:contentDescription="Volume Up"
+                            android:padding="7dp"
+                            android:src="@drawable/ic_volume_up"
+                            android:tint="@color/crow_accent_cyan" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnVolumeReset"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_button_outline_cyan"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:gravity="center"
                             android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
                             android:stateListAnimator="@null"
-                            app:strokeColor="@color/crow_accent_cyan"
-                            app:backgroundTint="@android:color/transparent" />
+                            android:text="Reset to 100%"
+                            android:textAllCaps="false"
+                            android:textColor="@color/crow_accent_cyan"
+                            android:textSize="10sp" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- ═══ PLAYBACK OPTIONS ═══ -->
+            <!-- ═══════════════════ PLAYBACK PROFILES CARD ═══════════════════ -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                app:cardBackgroundColor="@color/crow_surface_elevated"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_menu_manage"
+                        android:tint="@color/crow_accent_purple" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:letterSpacing="0.14"
+                        android:paddingStart="8dp"
+                        android:text="PLAYBACK PROFILES"
+                        android:textColor="@color/crow_on_bg"
+                        android:textSize="11sp" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnProfiles"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_button_outline_neutral"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:gravity="center"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:stateListAnimator="@null"
+                        android:text="Manage"
+                        android:textAllCaps="false"
+                        android:textColor="@color/crow_accent_purple"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ═══════════════════ PITCH / KEY CARD ═══════════════════ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
                 app:cardBackgroundColor="@color/crow_surface_elevated"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp">
@@ -675,17 +484,668 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="14dp">
+                    android:padding="16dp">
 
-                    <TextView
+                    <!-- Header -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        android:text="PLAYBACK OPTIONS"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_pitch"
+                            android:tint="@color/crow_accent_green" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:letterSpacing="0.14"
+                            android:paddingStart="8dp"
+                            android:text="PITCH / KEY"
+                            android:textColor="@color/crow_on_bg"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/pitchLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:text="0"
+                            android:textColor="@color/crow_accent_green"
+                            android:textSize="22sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_regular"
+                            android:text=" st"
+                            android:textColor="@color/crow_on_muted"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- Scale labels -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="-6"
+                            android:textSize="9sp" android:textColor="@color/crow_on_muted"
+                            android:fontFamily="@font/orbitron_regular" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="-3"
+                            android:textSize="9sp" android:textColor="@color/crow_on_muted"
+                            android:gravity="center" android:fontFamily="@font/orbitron_regular" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="0"
+                            android:textSize="9sp" android:textColor="@color/crow_accent_green"
+                            android:gravity="center" android:fontFamily="@font/orbitron_bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="+3"
+                            android:textSize="9sp" android:textColor="@color/crow_on_muted"
+                            android:gravity="center" android:fontFamily="@font/orbitron_regular" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="+6"
+                            android:textSize="9sp" android:textColor="@color/crow_on_muted"
+                            android:gravity="end" android:fontFamily="@font/orbitron_regular" />
+                    </LinearLayout>
+
+                    <!-- Seekbar -->
+                    <SeekBar
+                        android:id="@+id/seekPitch"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="8dp"
+                        android:max="12"
+                        android:progress="6"
+                        android:progressBackgroundTint="@color/crow_seekbar_bg"
+                        android:progressTint="@color/crow_accent_green"
+                        android:thumb="@drawable/seekbar_thumb_green" />
+
+                    <!-- Buttons: − + left, Reset right -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnPitchDown"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_button_outline_green"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:gravity="center"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:padding="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="−"
+                            android:textColor="@color/crow_accent_green"
+                            android:textSize="18sp" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnPitchUp"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/bg_button_outline_green"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:gravity="center"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:padding="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="+"
+                            android:textColor="@color/crow_accent_green"
+                            android:textSize="18sp" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnPitchReset"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_button_outline_green"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:gravity="center"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:stateListAnimator="@null"
+                            android:text="Reset to 0"
+                            android:textAllCaps="false"
+                            android:textColor="@color/crow_accent_green"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ═══════════════════ PLAYBACK SPEED CARD ═══════════════════ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                app:cardBackgroundColor="@color/crow_surface_elevated"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_forward_5"
+                            android:tint="@color/crow_accent_orange" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:letterSpacing="0.14"
+                            android:paddingStart="8dp"
+                            android:text="PLAYBACK SPEED"
+                            android:textColor="@color/crow_on_bg"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tvSpeedValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:text="1.0"
+                            android:textColor="@color/crow_accent_orange"
+                            android:textSize="22sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_regular"
+                            android:text=" x"
+                            android:textColor="@color/crow_on_muted"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- Scale labels -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="0.5x"
+                            android:textSize="9sp" android:textColor="@color/crow_on_muted"
+                            android:fontFamily="@font/orbitron_regular" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="0.75x"
+                            android:textSize="9sp" android:textColor="@color/crow_on_muted"
+                            android:gravity="center" android:fontFamily="@font/orbitron_regular" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="1.0x"
+                            android:textSize="9sp" android:textColor="@color/crow_accent_orange"
+                            android:gravity="center" android:fontFamily="@font/orbitron_bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="1.5x"
+                            android:textSize="9sp" android:textColor="@color/crow_on_muted"
+                            android:gravity="center" android:fontFamily="@font/orbitron_regular" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="2.0x"
+                            android:textSize="9sp" android:textColor="@color/crow_on_muted"
+                            android:gravity="end" android:fontFamily="@font/orbitron_regular" />
+                    </LinearLayout>
+
+                    <!-- Seekbar -->
+                    <SeekBar
+                        android:id="@+id/seekSpeed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="8dp"
+                        android:max="30"
+                        android:progress="10"
+                        android:progressBackgroundTint="@color/crow_seekbar_bg"
+                        android:progressTint="@color/crow_accent_orange"
+                        android:thumb="@drawable/seekbar_thumb_orange" />
+
+                    <!-- Buttons: − + left, Reset right -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnSpeedDown"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_button_outline_orange"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:gravity="center"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:padding="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="−"
+                            android:textColor="@color/crow_accent_orange"
+                            android:textSize="18sp" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnSpeedUp"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/bg_button_outline_orange"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:gravity="center"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:padding="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="+"
+                            android:textColor="@color/crow_accent_orange"
+                            android:textSize="18sp" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnSpeedReset"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_button_outline_orange"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:gravity="center"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:stateListAnimator="@null"
+                            android:text="Reset to 1.0x"
+                            android:textAllCaps="false"
+                            android:textColor="@color/crow_accent_orange"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ═══════════════════ TIMELINE TRIM CARD ═══════════════════ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                app:cardBackgroundColor="@color/crow_surface_elevated"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_trim"
+                            android:tint="@color/crow_on_muted" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:letterSpacing="0.14"
+                            android:paddingStart="8dp"
+                            android:text="TIMELINE TRIM"
+                            android:textColor="@color/crow_on_bg"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- START POINT -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="2dp"
+                        android:fontFamily="@font/orbitron_regular"
+                        android:letterSpacing="0.1"
+                        android:text="START POINT"
+                        android:textColor="@color/crow_on_muted"
+                        android:textSize="9sp" />
+
+                    <SeekBar
+                        android:id="@+id/seekTrimStart"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:progressBackgroundTint="@color/crow_seekbar_bg"
+                        android:progressTint="@color/crow_accent_blue"
+                        android:thumb="@drawable/seekbar_thumb_blue" />
+
+                    <TextView
+                        android:id="@+id/tvTrimStart"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="14dp"
+                        android:fontFamily="@font/orbitron_regular"
+                        android:text="Start: 0:00"
                         android:textColor="@color/crow_accent_blue"
-                        android:textSize="10sp"
-                        android:letterSpacing="0.12"
-                        android:textAllCaps="true" />
+                        android:textSize="11sp" />
+
+                    <!-- END POINT -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="2dp"
+                        android:fontFamily="@font/orbitron_regular"
+                        android:letterSpacing="0.1"
+                        android:text="END POINT"
+                        android:textColor="@color/crow_on_muted"
+                        android:textSize="9sp" />
+
+                    <SeekBar
+                        android:id="@+id/seekTrimEnd"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:progressBackgroundTint="@color/crow_seekbar_bg"
+                        android:progressTint="@color/crow_accent_red"
+                        android:thumb="@drawable/seekbar_thumb_red" />
+
+                    <TextView
+                        android:id="@+id/tvTrimEnd"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="10dp"
+                        android:fontFamily="@font/orbitron_regular"
+                        android:text="End: 0:00"
+                        android:textColor="@color/crow_accent_red"
+                        android:textSize="11sp" />
+
+                    <!-- Trim fine-tune buttons -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <!-- Start fine-tune row -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="36dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <androidx.appcompat.widget.AppCompatButton
+                                    android:id="@+id/btnTrimStartMinus"
+                                    android:layout_width="48dp"
+                                    android:layout_height="36dp"
+                                    android:background="@drawable/bg_button_outline_blue"
+                                    android:fontFamily="@font/orbitron_bold"
+                                    android:gravity="center"
+                                    android:minHeight="0dp"
+                                    android:minWidth="0dp"
+                                    android:padding="0dp"
+                                    android:stateListAnimator="@null"
+                                    android:text="−10s"
+                                    android:textColor="@color/crow_accent_blue"
+                                    android:textSize="9sp" />
+
+                                <androidx.appcompat.widget.AppCompatButton
+                                    android:id="@+id/btnTrimStartPlus"
+                                    android:layout_width="48dp"
+                                    android:layout_height="36dp"
+                                    android:layout_marginStart="8dp"
+                                    android:background="@drawable/bg_button_outline_blue"
+                                    android:fontFamily="@font/orbitron_bold"
+                                    android:gravity="center"
+                                    android:minHeight="0dp"
+                                    android:minWidth="0dp"
+                                    android:padding="0dp"
+                                    android:stateListAnimator="@null"
+                                    android:text="+10s"
+                                    android:textColor="@color/crow_accent_blue"
+                                    android:textSize="9sp" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="1dp"
+                                    android:layout_weight="1" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:fontFamily="@font/orbitron_bold"
+                                    android:gravity="center"
+                                    android:text="START"
+                                    android:textColor="@color/crow_accent_blue"
+                                    android:textSize="10sp" />
+                            </LinearLayout>
+
+                            <!-- End fine-tune row -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="36dp"
+                                android:layout_marginTop="10dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <androidx.appcompat.widget.AppCompatButton
+                                    android:id="@+id/btnTrimEndMinus"
+                                    android:layout_width="48dp"
+                                    android:layout_height="36dp"
+                                    android:background="@drawable/bg_button_outline_red"
+                                    android:fontFamily="@font/orbitron_bold"
+                                    android:gravity="center"
+                                    android:minHeight="0dp"
+                                    android:minWidth="0dp"
+                                    android:padding="0dp"
+                                    android:stateListAnimator="@null"
+                                    android:text="−10s"
+                                    android:textColor="@color/crow_accent_red"
+                                    android:textSize="9sp" />
+
+                                <androidx.appcompat.widget.AppCompatButton
+                                    android:id="@+id/btnTrimEndPlus"
+                                    android:layout_width="48dp"
+                                    android:layout_height="36dp"
+                                    android:layout_marginStart="8dp"
+                                    android:background="@drawable/bg_button_outline_red"
+                                    android:fontFamily="@font/orbitron_bold"
+                                    android:gravity="center"
+                                    android:minHeight="0dp"
+                                    android:minWidth="0dp"
+                                    android:padding="0dp"
+                                    android:stateListAnimator="@null"
+                                    android:text="+10s"
+                                    android:textColor="@color/crow_accent_red"
+                                    android:textSize="9sp" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="1dp"
+                                    android:layout_weight="1" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:fontFamily="@font/orbitron_bold"
+                                    android:gravity="center"
+                                    android:text="END"
+                                    android:textColor="@color/crow_accent_red"
+                                    android:textSize="10sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="12dp"
+                            android:layout_height="1dp" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnTrimReset"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_button_outline_neutral"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:gravity="center"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:stateListAnimator="@null"
+                            android:text="Reset Trim"
+                            android:textAllCaps="false"
+                            android:textColor="@color/crow_on_muted"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ═══════════════════ VISUAL ENHANCEMENT CARD ═══════════════════ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                app:cardBackgroundColor="@color/crow_surface_elevated"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_enhancement"
+                            android:tint="@color/crow_accent_purple" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:letterSpacing="0.14"
+                            android:paddingStart="8dp"
+                            android:text="VISUAL ENHANCEMENT"
+                            android:textColor="@color/crow_on_bg"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@color/crow_surface"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp">
+
+                        <Spinner
+                            android:id="@+id/spinnerEnhancement"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:popupBackground="@color/crow_surface_elevated" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ═══════════════════ PLAYBACK OPTIONS CARD ═══════════════════ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                app:cardBackgroundColor="@color/crow_surface_elevated"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_media_next"
+                            android:tint="@color/crow_accent_yellow" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:letterSpacing="0.14"
+                            android:paddingStart="8dp"
+                            android:text="PLAYBACK OPTIONS"
+                            android:textColor="@color/crow_on_bg"
+                            android:textSize="11sp" />
+                    </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -697,10 +1157,12 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:fontFamily="@font/orbitron_regular"
+                            android:paddingBottom="8dp"
+                            android:paddingTop="8dp"
                             android:text="@string/auto_next"
                             android:textColor="@color/crow_on_bg"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
+                            android:textSize="11sp"
                             app:thumbTint="@color/crow_accent_cyan"
                             app:trackTint="@color/crow_divider" />
 
@@ -709,23 +1171,26 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:fontFamily="@font/orbitron_regular"
+                            android:paddingBottom="8dp"
+                            android:paddingTop="8dp"
                             android:text="@string/loop"
                             android:textColor="@color/crow_on_bg"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
+                            android:textSize="11sp"
                             app:thumbTint="@color/crow_accent_cyan"
                             app:trackTint="@color/crow_divider" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- ═══ VISUAL ENHANCEMENT ═══ -->
+            <!-- ═══════════════════ ACTIONS CARD ═══════════════════ -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="14dp"
                 app:cardBackgroundColor="@color/crow_surface_elevated"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp">
@@ -733,80 +1198,50 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="10dp"
-                        android:text="VISUAL ENHANCEMENT"
-                        android:textColor="@color/crow_accent_purple"
-                        android:textSize="10sp"
-                        android:letterSpacing="0.12"
-                        android:textAllCaps="true" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@color/crow_surface"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp">
-
-                        <Spinner
-                            android:id="@+id/spinnerEnhancement"
-                            android:layout_width="match_parent"
-                            android:layout_height="48dp"
-                            android:popupBackground="@color/crow_surface_elevated" />
-                    </LinearLayout>
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- ═══ ACTIONS ═══ -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
-                app:cardBackgroundColor="@color/crow_surface_elevated"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
                     android:gravity="center"
-                    android:padding="14dp">
+                    android:orientation="horizontal"
+                    android:padding="16dp">
 
-                    <com.google.android.material.button.MaterialButton
+                    <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnFavorite"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="10dp"
                         android:layout_weight="1"
+                        android:background="@drawable/bg_button_outline_yellow"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:gravity="center"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="12dp"
+                        android:stateListAnimator="@null"
                         android:text="@string/favorite_on"
+                        android:textAllCaps="false"
                         android:textColor="@color/crow_accent_yellow"
-                        app:strokeColor="@color/crow_accent_yellow"
-                        app:backgroundTint="@android:color/transparent" />
+                        android:textSize="11sp" />
 
-                    <com.google.android.material.button.MaterialButton
+                    <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnSavePrefs"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:background="@drawable/bg_button_outline_cyan"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:gravity="center"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="12dp"
+                        android:stateListAnimator="@null"
                         android:text="@string/save_prefs"
-                        android:textColor="@color/crow_bg"
-                        app:backgroundTint="@color/crow_accent_blue" />
+                        android:textAllCaps="false"
+                        android:textColor="@color/crow_accent_cyan"
+                        android:textSize="11sp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
-    <!-- ── Controls panel (the scrollable panel reference) ── -->
-    <!-- Note: controlsPanel is the overlay on the video surface, referenced by id in Activity -->
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

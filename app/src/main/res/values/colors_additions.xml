@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Additional colors matching ClawMikia roles, mapped to CrowTheatron palette -->
+    <color name="crow_accent_light_blue">#4A90E8</color>   <!-- same as crow_accent_blue, for trim start -->
+    <color name="crow_neon_red">#FF2D55</color>            <!-- same as crow_accent_red, for trim end -->
+    <color name="crow_seekbar_bg">#1E1E2E</color>          <!-- seekbar track background -->
+    <color name="crow_text_primary">@color/crow_on_bg</color>
+    <color name="crow_text_secondary">@color/crow_on_muted</color>
+    <color name="crow_text_hint">#3D3D5C</color>
+    <color name="crow_bg_card">@color/crow_surface_elevated</color>
+</resources>

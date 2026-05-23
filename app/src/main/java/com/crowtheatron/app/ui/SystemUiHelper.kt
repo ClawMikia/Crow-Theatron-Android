@@ -1,6 +1,7 @@
 package com.crowtheatron.app.ui
 
 import android.graphics.Color
+import android.os.Build
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -21,13 +22,21 @@ fun AppCompatActivity.setContentWithCrowInsets(contentRoot: View) {
     setContentView(contentRoot)
 
     window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-    window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-    WindowCompat.setDecorFitsSystemWindows(window, false)
-    window.navigationBarColor = Color.BLACK
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+    } else {
+        @Suppress("DEPRECATION")
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = Color.BLACK
+    }
 
     contentRoot.postDelayed({
-        window.navigationBarColor = Color.BLACK
-        window.navigationBarColor = 0xFF000000.toInt()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = Color.BLACK
+        }
     }, 100)
 
     ViewCompat.setOnApplyWindowInsetsListener(contentRoot) { view, insets ->
@@ -42,12 +51,18 @@ fun AppCompatActivity.setContentWithCrowInsets(contentRoot: View) {
             bottom = if (bottomNav == null) bars.bottom else 0,
         )
         bottomNav?.updatePadding(bottom = bars.bottom)
-        window.navigationBarColor = getColor(R.color.crow_pure_black)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = getColor(R.color.crow_pure_black)
+        }
         insets
     }
 
     ViewCompat.requestApplyInsets(contentRoot)
     contentRoot.post {
-        window.navigationBarColor = getColor(R.color.crow_pure_black)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = getColor(R.color.crow_pure_black)
+        }
     }
 }

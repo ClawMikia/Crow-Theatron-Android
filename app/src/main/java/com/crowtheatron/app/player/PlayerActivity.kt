@@ -18,6 +18,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.AdapterView
@@ -63,7 +64,6 @@ class PlayerActivity : AppCompatActivity() {
     private var playerReady = false
     private var isFullscreen = false
     private var isBindingUi = false
-    private var controlsVisible = true
     private var chapters = listOf<ChapterMarker>()
 
     private var currentSpeed  = 1.0f
@@ -88,16 +88,12 @@ class PlayerActivity : AppCompatActivity() {
             val lb = binder as PlaybackService.LocalBinder
             playbackService = lb.getService()
             serviceBound = true
-            // Player already initialised locally - just register for notifications
         }
         override fun onServiceDisconnected(name: ComponentName) {
             serviceBound = false
             playbackService = null
         }
     }
-
-    // ── Auto-hide controls ────────────────────────────────────────────────────
-    private val hideControlsRunnable = Runnable { hideControls() }
 
     // ── Tick ──────────────────────────────────────────────────────────────────
     private val tickRunnable = object : Runnable {
@@ -117,8 +113,11 @@ class PlayerActivity : AppCompatActivity() {
                 applyZoom(working.zoomLevel)
             }
             if (state == Player.STATE_ENDED) {
+                binding.seekPlayback.progress = 0
+                updateTimeLabel(0L, liveDurationMs())
                 if (binding.switchLoop.isChecked) {
-                    player?.seekTo(working.trimStartMs.coerceAtLeast(0L)); player?.play()
+                    player?.seekTo(working.trimStartMs.coerceAtLeast(0L))
+                    player?.play()
                 } else if (binding.switchAutoNext.isChecked) {
                     playAdjacent(1)
                 }
@@ -128,7 +127,6 @@ class PlayerActivity : AppCompatActivity() {
         }
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             updatePlayPauseIcon()
-            if (isPlaying) scheduleHideControls() else showControls()
         }
         override fun onPlayerError(error: PlaybackException) {
             Toast.makeText(this@PlayerActivity,
@@ -172,14 +170,22 @@ class PlayerActivity : AppCompatActivity() {
         bindUiFromWorking()
         setupControls()
         startAndBindService()
-        // Init player immediately (service binding may be async)
         initPlayerIfNeeded()
         handler.post(tickRunnable)
     }
 
     override fun onResume() {
         super.onResume()
-        window.navigationBarColor = Color.BLACK
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+            window.insetsController?.setSystemBarsAppearance(
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = Color.BLACK
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
@@ -217,12 +223,17 @@ class PlayerActivity : AppCompatActivity() {
     override fun onPictureInPictureModeChanged(isInPiPMode: Boolean, newConfig: android.content.res.Configuration) {
         super.onPictureInPictureModeChanged(isInPiPMode, newConfig)
         if (isInPiPMode) {
-            hideControls()
             binding.toolbar.visibility = View.GONE
-            binding.controlsOverlay.visibility = View.GONE
         } else {
             binding.toolbar.visibility = View.VISIBLE
-            showControls()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // When the system rotates (e.g. user physically tilts phone), sync fullscreen state
+        if (isFullscreen) {
+            enforceFullscreenLayout()
         }
     }
 
@@ -264,10 +275,6 @@ class PlayerActivity : AppCompatActivity() {
         exo.stop()
         exo.setMediaItem(mediaItemFor(working))
         exo.prepare()
-        val trimLo = working.trimStartMs.coerceAtLeast(0L)
-        val trimHi = if (working.trimEndMs > 0L) working.trimEndMs else Long.MAX_VALUE
-        val resumeMs = working.positionMs.coerceIn(trimLo, trimHi)
-        exo.seekTo(if (resumeMs > 0L) resumeMs else trimLo)
         applyPitchAndSpeed(working.pitchSemitones, currentSpeed)
         exo.volume = currentVolume * working.audioBoost.coerceIn(1f, 2f)
         exo.repeatMode = if (working.loopPlayback) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
@@ -293,25 +300,15 @@ class PlayerActivity : AppCompatActivity() {
             saturation = working.saturation,
             hue        = working.hue,
         )
-        // Apply to PlayerView's TextureView via a Paint
-        try {
-            val tv = binding.playerView.videoSurfaceView
-            if (tv is android.view.TextureView) {
-                // Use canvas layer paint for color filtering
-                val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(matrix) }
-                tv.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
-            }
-        } catch (_: Exception) {}
 
-        // Simple overlay for ambient color
         val o = binding.enhancementOverlay
         when (working.enhancement) {
-            EnhancementMode.NONE            -> o.visibility = View.GONE
-            EnhancementMode.WARM_FILM       -> { o.setBackgroundColor(Color.argb(35,255,180,80)); o.visibility = View.VISIBLE }
-            EnhancementMode.COOL_HDR_SIM    -> { o.setBackgroundColor(Color.argb(30,80,140,255)); o.visibility = View.VISIBLE }
-            EnhancementMode.NIGHT_MODE      -> { o.setBackgroundColor(Color.argb(40,255,80,0)); o.visibility = View.VISIBLE }
-            EnhancementMode.EYE_COMFORT     -> { o.setBackgroundColor(Color.argb(30,255,200,50)); o.visibility = View.VISIBLE }
-            else                            -> o.visibility = View.GONE
+            EnhancementMode.NONE         -> o.visibility = View.GONE
+            EnhancementMode.WARM_FILM    -> { o.setBackgroundColor(Color.argb(35,255,180,80)); o.visibility = View.VISIBLE }
+            EnhancementMode.COOL_HDR_SIM -> { o.setBackgroundColor(Color.argb(30,80,140,255)); o.visibility = View.VISIBLE }
+            EnhancementMode.NIGHT_MODE   -> { o.setBackgroundColor(Color.argb(40,255,80,0)); o.visibility = View.VISIBLE }
+            EnhancementMode.EYE_COMFORT  -> { o.setBackgroundColor(Color.argb(30,255,200,50)); o.visibility = View.VISIBLE }
+            else                         -> o.visibility = View.GONE
         }
     }
 
@@ -338,7 +335,6 @@ class PlayerActivity : AppCompatActivity() {
 
         val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                toggleControlsVisibility()
                 return true
             }
 
@@ -346,15 +342,12 @@ class PlayerActivity : AppCompatActivity() {
                 val screenWidth = binding.playerView.width.toFloat()
                 val tapX = e.x
                 if (tapX < screenWidth / 3f) {
-                    // Left third — rewind
                     jumpBy(-10)
                     showGestureHint("⏪ -10s")
                 } else if (tapX > screenWidth * 2f / 3f) {
-                    // Right third — fast forward
                     jumpBy(+10)
                     showGestureHint("⏩ +10s")
                 } else {
-                    // Centre — play/pause
                     player?.let { if (it.isPlaying) it.pause() else it.play() }
                 }
                 return true
@@ -367,7 +360,6 @@ class PlayerActivity : AppCompatActivity() {
                 val dy = abs(distY)
 
                 if (dx > dy) {
-                    // Horizontal swipe = seek
                     val dur = liveDurationMs()
                     val seekDeltaMs = (-distX / screenWidth * dur * 0.3f).toLong()
                     val exo = player ?: return false
@@ -377,10 +369,8 @@ class PlayerActivity : AppCompatActivity() {
                     exo.seekTo(newPos)
                     showGestureHint(FormatUtils.formatDuration(newPos))
                 } else {
-                    // Vertical swipe
                     val swipeZone = e1nn.x / screenWidth
                     if (swipeZone < 0.5f) {
-                        // Left half = brightness
                         val delta = -distY / binding.playerView.height
                         currentBrightness = (currentBrightness + delta * 0.5f).coerceIn(0.01f, 1f)
                         val lp = window.attributes
@@ -388,7 +378,6 @@ class PlayerActivity : AppCompatActivity() {
                         window.attributes = lp
                         showGestureHint("☀ ${(currentBrightness * 100).toInt()}%")
                     } else {
-                        // Right half = volume
                         val delta = -distY / binding.playerView.height
                         currentVolume = (currentVolume + delta * 0.5f).coerceIn(0f, 1f)
                         player?.volume = currentVolume * working.audioBoost.coerceIn(1f, 2f)
@@ -424,40 +413,6 @@ class PlayerActivity : AppCompatActivity() {
             .alpha(0f).setDuration(300L)
             .withEndAction { binding.gestureHintOverlay.visibility = View.GONE }
             .start()
-    }
-
-    // ── Controls visibility ───────────────────────────────────────────────────
-
-    private fun toggleControlsVisibility() {
-        if (controlsVisible) hideControls() else showControls()
-    }
-
-    private fun showControls() {
-        controlsVisible = true
-        binding.controlsOverlay.animate()
-            .alpha(1f).setDuration(200L)
-            .withStartAction { binding.controlsOverlay.visibility = View.VISIBLE }
-            .start()
-        binding.toolbar.animate().alpha(1f).setDuration(200L)
-            .withStartAction { binding.toolbar.visibility = View.VISIBLE }.start()
-        if (player?.isPlaying == true) scheduleHideControls()
-    }
-
-    private fun hideControls() {
-        if (isFullscreen) {
-            controlsVisible = false
-            binding.controlsOverlay.animate()
-                .alpha(0f).setDuration(300L)
-                .withEndAction { binding.controlsOverlay.visibility = View.GONE }
-                .start()
-            binding.toolbar.animate().alpha(0f).setDuration(300L)
-                .withEndAction { binding.toolbar.visibility = View.GONE }.start()
-        }
-    }
-
-    private fun scheduleHideControls() {
-        handler.removeCallbacks(hideControlsRunnable)
-        handler.postDelayed(hideControlsRunnable, 3500L)
     }
 
     // ── Duration helpers ──────────────────────────────────────────────────────
@@ -540,6 +495,9 @@ class PlayerActivity : AppCompatActivity() {
         binding.seekTrimEnd.progress =
             if (working.trimEndMs <= 0L) 1000
             else ((working.trimEndMs * 1000L) / full).toInt().coerceIn(0, 1000)
+        binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(working.trimStartMs)}"
+        val endMs = if (working.trimEndMs <= 0L) full else working.trimEndMs
+        binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(endMs)}"
     }
 
     private fun setupEnhancementSpinner() {
@@ -577,13 +535,26 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun setupControls() {
         binding.btnPlayPause.setOnClickListener {
-            player?.let { if (it.isPlaying) it.pause() else it.play() }
+            val exo = player ?: return@setOnClickListener
+            when {
+                exo.playbackState == Player.STATE_ENDED -> {
+                    exo.seekTo(working.trimStartMs.coerceAtLeast(0L))
+                    exo.play()
+                }
+                exo.isPlaying -> exo.pause()
+                else -> exo.play()
+            }
         }
+
         binding.btnStop.setOnClickListener {
             player?.pause()
-            player?.seekTo(working.trimStartMs.coerceAtLeast(0L))
+            val trimStart = working.trimStartMs.coerceAtLeast(0L)
+            player?.seekTo(trimStart)
+            binding.seekPlayback.progress = 0
+            updateTimeLabel(trimStart, liveDurationMs())
             persistProgress(); tickTimeline()
         }
+
         binding.btnRewind.setOnClickListener  { jumpBy(-SEEK_JUMP_SECONDS) }
         binding.btnForward.setOnClickListener { jumpBy(SEEK_JUMP_SECONDS)  }
         binding.btnPrev.setOnClickListener    { playAdjacent(-1) }
@@ -591,19 +562,16 @@ class PlayerActivity : AppCompatActivity() {
         binding.btnFullscreen.setOnClickListener { toggleFullscreen() }
         binding.btnPip.setOnClickListener { enterPiP() }
 
-        // Profiles button
         binding.btnProfiles.setOnClickListener {
             startActivity(Intent(this, PlaybackProfilesActivity::class.java)
                 .putExtra(PlaybackProfilesActivity.EXTRA_VIDEO_ID, working.id))
         }
 
-        // Chapter bookmark
         binding.btnAddChapter.setOnClickListener {
             val pos = player?.currentPosition ?: 0L
             showAddChapterDialog(pos)
         }
 
-        // Playback seekbar
         binding.seekPlayback.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (!fromUser || isBindingUi) return
@@ -621,7 +589,6 @@ class PlayerActivity : AppCompatActivity() {
             }
         })
 
-        // Pitch
         binding.seekPitch.setOnSeekBarChangeListener(seekBarListener(
             onChange = { p, fromUser -> if (fromUser) applyPitchStep(p) },
             onStop   = { persistPrefs() }
@@ -638,7 +605,6 @@ class PlayerActivity : AppCompatActivity() {
             binding.seekPitch.progress = 6; applyPitchStep(6); persistPrefs()
         }
 
-        // Speed
         binding.seekSpeed.setOnSeekBarChangeListener(seekBarListener(
             onChange = { p, fromUser -> if (fromUser) applySpeedStep(p) },
             onStop   = { persistPrefs() }
@@ -656,7 +622,6 @@ class PlayerActivity : AppCompatActivity() {
             binding.seekSpeed.progress = np; applySpeedStep(np); persistPrefs()
         }
 
-        // Volume
         binding.seekVolume.setOnSeekBarChangeListener(seekBarListener(
             onChange = { p, fromUser -> if (fromUser) applyVolumeStep(p) },
             onStop   = { persistPrefs() }
@@ -669,16 +634,65 @@ class PlayerActivity : AppCompatActivity() {
             val np = ((currentVolume * 100).toInt() + 5).coerceIn(0, 100)
             binding.seekVolume.progress = np; applyVolumeStep(np); persistPrefs()
         }
+        binding.btnVolumeReset.setOnClickListener {
+            binding.seekVolume.progress = 100; applyVolumeStep(100); persistPrefs()
+        }
 
-        // Trim
         binding.seekTrimStart.setOnSeekBarChangeListener(seekBarListener(
+            onChange = { p, _ ->
+                val ms = p * metaDurationMs() / 1000L
+                binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(ms)}"
+            },
             onStop = { if (!isBindingUi) { readTrimFromSeekBars(); persistPrefs() } }
         ))
         binding.seekTrimEnd.setOnSeekBarChangeListener(seekBarListener(
+            onChange = { p, _ ->
+                val ms = p * metaDurationMs() / 1000L
+                binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(ms)}"
+            },
             onStop = { if (!isBindingUi) { readTrimFromSeekBars(); persistPrefs() } }
         ))
 
-        // Switches
+        binding.btnTrimStartMinus.setOnClickListener {
+            val full = metaDurationMs()
+            val cur = binding.seekTrimStart.progress * full / 1000L
+            val newMs = (cur - 10_000L).coerceAtLeast(0L)
+            binding.seekTrimStart.progress = (newMs * 1000L / full).toInt()
+            binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(newMs)}"
+            readTrimFromSeekBars(); persistPrefs()
+        }
+        binding.btnTrimStartPlus.setOnClickListener {
+            val full = metaDurationMs()
+            val cur = binding.seekTrimStart.progress * full / 1000L
+            val newMs = (cur + 10_000L).coerceAtMost(full - 500L)
+            binding.seekTrimStart.progress = (newMs * 1000L / full).toInt()
+            binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(newMs)}"
+            readTrimFromSeekBars(); persistPrefs()
+        }
+        binding.btnTrimEndMinus.setOnClickListener {
+            val full = metaDurationMs()
+            val cur = binding.seekTrimEnd.progress * full / 1000L
+            val newMs = (cur - 10_000L).coerceAtLeast(working.trimStartMs + 500L)
+            binding.seekTrimEnd.progress = (newMs * 1000L / full).toInt()
+            binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(newMs)}"
+            readTrimFromSeekBars(); persistPrefs()
+        }
+        binding.btnTrimEndPlus.setOnClickListener {
+            val full = metaDurationMs()
+            val cur = binding.seekTrimEnd.progress * full / 1000L
+            val newMs = (cur + 10_000L).coerceAtMost(full)
+            binding.seekTrimEnd.progress = (newMs * 1000L / full).toInt()
+            binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(newMs)}"
+            readTrimFromSeekBars(); persistPrefs()
+        }
+        binding.btnTrimReset.setOnClickListener {
+            working = working.copy(trimStartMs = 0L, trimEndMs = 0L)
+            isBindingUi = true; bindTrimSeekers(); isBindingUi = false
+            binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(0L)}"
+            binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(metaDurationMs())}"
+            persistPrefs()
+        }
+
         binding.switchLoop.setOnCheckedChangeListener { _, checked ->
             if (isBindingUi) return@setOnCheckedChangeListener
             working = working.copy(loopPlayback = checked)
@@ -690,7 +704,6 @@ class PlayerActivity : AppCompatActivity() {
             working = working.copy(autoPlayNext = checked); persistPrefs()
         }
 
-        // Favourite
         binding.btnFavorite.setOnClickListener {
             val next = !working.favorite
             working = working.copy(favorite = next)
@@ -700,7 +713,6 @@ class PlayerActivity : AppCompatActivity() {
             )
         }
 
-        // Save prefs
         binding.btnSavePrefs.setOnClickListener {
             readTrimFromSeekBars()
             working = working.copy(
@@ -725,22 +737,27 @@ class PlayerActivity : AppCompatActivity() {
     // ── Chapter dialog ────────────────────────────────────────────────────────
 
     private fun showAddChapterDialog(posMs: Long) {
-        val input = android.widget.EditText(this).apply {
-            hint = "Chapter name"
-            setTextColor(Color.WHITE)
-            setSingleLine(true)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_chapter, null)
+        dialogView.findViewById<android.widget.TextView>(R.id.tvTimestamp).text =
+            "at ${FormatUtils.formatDuration(posMs)}"
+        val etName = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etChapterName)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        dialogView.findViewById<android.widget.ImageButton>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
         }
-        AlertDialog.Builder(this)
-            .setTitle("Add chapter at ${FormatUtils.formatDuration(posMs)}")
-            .setView(input)
-            .setPositiveButton("Add") { _, _ ->
-                val label = input.text.toString().trim().ifBlank { "Chapter" }
-                repo.addChapter(working.id, posMs, label)
-                chapters = repo.listChapters(working.id)
-                Toast.makeText(this, "Chapter added: $label", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        dialogView.findViewById<android.widget.ImageButton>(R.id.btnAdd).setOnClickListener {
+            val label = etName.text.toString().trim().ifBlank { "Chapter" }
+            repo.addChapter(working.id, posMs, label)
+            chapters = repo.listChapters(working.id)
+            Toast.makeText(this, "Chapter added: $label", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     // ── Apply helpers ─────────────────────────────────────────────────────────
@@ -801,11 +818,13 @@ class PlayerActivity : AppCompatActivity() {
         val fresh = repo.getById(playlistIds[playlistIndex]) ?: run {
             Toast.makeText(this, "Missing video", Toast.LENGTH_SHORT).show(); return
         }
-        working = fresh
+        // Zero out saved position so seekbar, time label, and ExoPlayer all start from 0
+        working = fresh.copy(positionMs = 0L)
         currentSpeed  = working.playbackSpeed.coerceIn(0.5f, 2.0f)
         currentVolume = working.volumeLevel.coerceIn(0f, 1f)
         currentZoom   = working.zoomLevel.coerceIn(1f, 3f)
         chapters      = repo.listChapters(working.id)
+        binding.seekPlayback.progress = 0
         bindUiFromWorking()
         attachCurrentMedia(play = true)
         refreshNavButtons()
@@ -832,19 +851,87 @@ class PlayerActivity : AppCompatActivity() {
     private fun toggleFullscreen() {
         isFullscreen = !isFullscreen
         if (isFullscreen) {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            supportActionBar?.hide()
-            binding.playerSurface.layoutParams.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
-            scheduleHideControls()
+            enforceFullscreenLayout()
         } else {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            supportActionBar?.show()
-            binding.playerSurface.layoutParams.height = (220 * resources.displayMetrics.density).toInt()
-            showControls()
+            exitFullscreenLayout()
         }
+    }
+
+    /**
+     * Expands playerSurface + playerView to fill the entire window and hides all
+     * chrome (toolbar, controls panel).  Safe to call from onConfigurationChanged.
+     */
+    private fun enforceFullscreenLayout() {
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+
+        // Hide system bars
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.let {
+                it.hide(android.view.WindowInsets.Type.systemBars())
+                it.systemBarsBehavior =
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        }
+
+        // Hide toolbar + controls so the video can fill the screen
+        supportActionBar?.hide()
+        binding.toolbar.visibility = View.GONE
+
+        // Optionally hide your controls/scroll panel if you have one
+        // binding.controlsPanel.visibility = View.GONE  // uncomment if you have this id
+
+        // playerSurface wraps playerView — make both fill the parent
+        binding.playerSurface.layoutParams = binding.playerSurface.layoutParams.also {
+            it.width  = ViewGroup.LayoutParams.MATCH_PARENT
+            it.height = ViewGroup.LayoutParams.MATCH_PARENT
+        }
+        binding.playerView.layoutParams = binding.playerView.layoutParams.also {
+            it.width  = ViewGroup.LayoutParams.MATCH_PARENT
+            it.height = ViewGroup.LayoutParams.MATCH_PARENT
+        }
+
         binding.playerSurface.requestLayout()
+        binding.playerView.requestLayout()
+    }
+
+    /**
+     * Restores portrait layout with the fixed-height video surface and visible chrome.
+     */
+    private fun exitFullscreenLayout() {
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+
+        // Restore system bars
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.show(android.view.WindowInsets.Type.systemBars())
+        } else {
+            @Suppress("DEPRECATION")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        }
+
+        // Restore toolbar + controls
+        supportActionBar?.show()
+        binding.toolbar.visibility = View.VISIBLE
+
+        // Optionally restore your controls/scroll panel
+        // binding.controlsPanel.visibility = View.VISIBLE  // uncomment if you have this id
+
+        // Restore playerSurface to its fixed portrait height
+        val portraitHeightPx = (220 * resources.displayMetrics.density).toInt()
+        binding.playerSurface.layoutParams = binding.playerSurface.layoutParams.also {
+            it.width  = ViewGroup.LayoutParams.MATCH_PARENT
+            it.height = portraitHeightPx
+        }
+        // playerView fills playerSurface
+        binding.playerView.layoutParams = binding.playerView.layoutParams.also {
+            it.width  = ViewGroup.LayoutParams.MATCH_PARENT
+            it.height = ViewGroup.LayoutParams.MATCH_PARENT
+        }
+
+        binding.playerSurface.requestLayout()
+        binding.playerView.requestLayout()
     }
 
     private fun enterPiP() {

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/crow_surface"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="Add Chapter"
+        android:textColor="@color/crow_on_bg"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/orbitron_bold" />
+
+    <!-- Subtitle: timestamp -->
+    <TextView
+        android:id="@+id/tvTimestamp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="at 0:00"
+        android:textColor="@color/crow_accent_yellow"
+        android:textSize="12sp"
+        android:fontFamily="@font/orbitron_regular" />
+
+    <!-- Chapter name input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilChapterName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="0dp"
+        android:layout_marginBottom="8dp"
+        app:boxBackgroundColor="@color/crow_surface_elevated"
+        app:boxStrokeColor="@color/crow_accent_yellow"
+        app:boxStrokeWidth="1dp"
+        app:cursorColor="@color/crow_accent_yellow"
+        app:hintTextColor="@color/crow_on_muted">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etChapterName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Chapter name"
+            android:inputType="text"
+            android:maxLines="1"
+            android:textColor="@color/crow_on_bg"
+            android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Buttons row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/btnCancel"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_button_outline_neutral"
+            android:contentDescription="Cancel"
+            android:src="@drawable/ic_close"
+            android:tint="@color/crow_on_muted" />
+
+        <ImageButton
+            android:id="@+id/btnAdd"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_button_outline_yellow"
+            android:contentDescription="Add Chapter"
+            android:src="@drawable/ic_check"
+            android:tint="@color/crow_accent_yellow" />
+
+    </LinearLayout>
+
+</LinearLayout>
