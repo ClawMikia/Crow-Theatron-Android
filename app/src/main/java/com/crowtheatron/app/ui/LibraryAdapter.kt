@@ -3,14 +3,18 @@ package com.crowtheatron.app.ui
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.crowtheatron.app.R
 import com.crowtheatron.app.databinding.ItemLibraryHeaderBinding
 import com.crowtheatron.app.databinding.ItemVideoCardBinding
 import com.crowtheatron.app.util.FormatUtils
 
 class LibraryAdapter(
+    private val onHeaderClick: (folder: String) -> Unit = {},
+    private val onRemove: ((videoId: Long) -> Unit)? = null,
     private val onOpen: (videoId: Long, playlistIds: LongArray, indexInPlaylist: Int) -> Unit,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -41,7 +45,7 @@ class LibraryAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
-            is LibraryListItem.Header -> (holder as HeaderVH).bind(item.folder)
+            is LibraryListItem.Header -> (holder as HeaderVH).bind(item)
             is LibraryListItem.VideoRow -> (holder as VideoVH).bind(item)
         }
     }
@@ -53,8 +57,15 @@ class LibraryAdapter(
     }
 
     inner class HeaderVH(private val b: ItemLibraryHeaderBinding) : RecyclerView.ViewHolder(b.root) {
-        fun bind(folder: String) {
-            b.headerTitle.text = folder
+        fun bind(header: LibraryListItem.Header) {
+            b.headerTitle.text = header.folder
+            // Show expansion indicator
+            b.headerTitle.setCompoundDrawablesWithIntrinsicBounds(
+                0, 0,
+                if (header.isExpanded) android.R.drawable.arrow_up_float else android.R.drawable.arrow_down_float,
+                0
+            )
+            b.root.setOnClickListener { onHeaderClick(header.folder) }
         }
     }
 
@@ -83,6 +94,14 @@ class LibraryAdapter(
                 b.thumbnail.setImageDrawable(null)
                 b.thumbnail.setBackgroundColor(Color.DKGRAY)
             }
+            
+            if (onRemove != null) {
+                b.btnRemove.visibility = View.VISIBLE
+                b.btnRemove.setOnClickListener { onRemove.invoke(e.id) }
+            } else {
+                b.btnRemove.visibility = View.GONE
+            }
+
             b.root.setOnClickListener {
                 val idx = playlistCache.indexOfFirst { it == e.id }
                 if (idx >= 0) onOpen(e.id, playlistCache, idx)

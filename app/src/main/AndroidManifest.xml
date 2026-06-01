@@ -72,7 +72,7 @@
             android:exported="false" />
 
         <activity
-            android:name=".profile.PlaybackProfilesActivity"
+            android:name=".playlist.PlaylistListActivity"
             android:exported="false" />
 
         <!-- Background playback service -->

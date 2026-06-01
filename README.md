@@ -1,41 +1,42 @@
-# Crow Theatron
+# Crow Théatron
 
 A comprehensive Android video player and media management application with advanced features for video organization, enhancement, and playback.
 
 ## Description
 
-Crow Theatron is a feature-rich Android application designed for video enthusiasts who want a powerful yet intuitive media player. The app combines advanced video playback capabilities with sophisticated media management, including folder scanning, video enhancement, playback memory, and a modern user interface.
+Crow Théatron is a feature-rich Android application designed for video enthusiasts who want a powerful yet intuitive media player. The app combines advanced video playback capabilities with sophisticated media management, including folder scanning, video enhancement, playback memory, and a modern user interface.
 
 ## Features
 
 ### Core Functionality
-- **Advanced Video Playback**: Smooth video streaming using ExoPlayer with comprehensive playback controls
-- **Local Database**: SQLite database for storing video metadata, preferences, and playback history
-- **Folder Scanning**: Automatic detection and indexing of video files from device storage
-- **Video Library**: Organized video collection with metadata management
+- **Advanced Video Playback**: Smooth video streaming using ExoPlayer (Media3) with comprehensive playback controls.
+- **Local Database**: SQLite database for storing video metadata, preferences, and playback history.
+- **Folder Scanning**: Automatic detection and indexing of video files from device storage.
+- **Video Library**: Organized video collection with metadata management and search capabilities.
+- **Playlists & Chapters**: Create custom playlists and add chapter markers to specific video positions for quick navigation.
 
 ### Enhanced Features
-- **Video Enhancement**: Built-in video enhancement tools for improved viewing experience
-- **Playback Memory**: Resume videos from where you left off across sessions
-- **Multiple UI Themes**: Modern, responsive interface with multiple activity layouts
-- **Settings Management**: Comprehensive user preferences and app configuration
+- **Video Enhancement**: Built-in tools for real-time adjustment of brightness, contrast, saturation, hue, and sharpness.
+- **Timeline Trimming**: Precise start and end point selection for videos to focus on specific segments.
+- **Audio & Subtitle Control**: Audio boost, equalizer presets, and highly customizable subtitle settings (offset, size, background).
+- **Playback Memory**: Resume videos from where you left off across sessions with per-video preference persistence.
+- **Multiple UI Themes**: Modern, responsive interface with a dark "Crow" aesthetic.
 
 ### User Interface
-- **Main Activity**: Central hub for navigation and quick access to features
-- **Player Activity**: Full-featured video player with advanced controls
-- **Library View**: Organized video browsing and management
-- **Explore Mode**: Discover and browse video content
-- **Settings Screen**: Comprehensive app configuration options
+- **Main Activity**: Central hub for navigation (Home, Library, Favorites, Memory, Explore).
+- **Player Activity**: Full-featured video player with gesture controls and advanced overlay panels.
+- **Library View**: Organized video browsing by folder, recently played, or favorites.
+- **Settings Screen**: Comprehensive app configuration for display and playback defaults.
 
 ## Technical Stack
 
 - **Language**: Kotlin
 - **Platform**: Android (API 26 - 36)
-- **Database**: SQLite with custom database helper
+- **Database**: SQLite with custom database helper (CrowDbHelper)
 - **Media Player**: ExoPlayer (Media3) for advanced video playback
-- **Architecture**: Android MVC pattern with ViewBinding
-- **Build System**: Gradle with Kotlin DSL
-- **UI Framework**: Android Views with Material Design components
+- **Architecture**: Android MVC/Repository pattern with ViewBinding
+- **Build System**: Gradle with Kotlin DSL and Version Catalogs
+- **UI Framework**: Android Views with Material Design 3 components
 - **Coroutines**: Kotlin Coroutines for asynchronous operations
 
 ## Project Structure
@@ -45,179 +46,83 @@ CrowTheatron/
 ├── app/
 │   ├── src/main/
 │   │   ├── java/com/crowtheatron/app/
-│   │   │   ├── data/           # Database and data management
-│   │   │   │   ├── AppPrefs.kt          # Application preferences
-│   │   │   │   ├── CrowDbHelper.kt      # SQLite database helper
-│   │   │   │   ├── EnhancementMode.kt   # Video enhancement settings
-│   │   │   │   ├── FolderScanner.kt     # Media folder scanning
-│   │   │   │   ├── VideoEntity.kt       # Video data model
-│   │   │   │   └── VideoRepository.kt   # Data access layer
-│   │   │   ├── enhancement/    # Video enhancement features
-│   │   │   ├── explore/         # Content discovery
-│   │   │   ├── folder/          # Folder management
-│   │   │   ├── library/         # Video library management
-│   │   │   ├── main/            # Main activity
-│   │   │   ├── memory/          # Playback memory
-│   │   │   ├── player/          # Video player
-│   │   │   ├── settings/        # App settings
-│   │   │   ├── splash/          # Splash screen
-│   │   │   ├── ui/              # UI components and utilities
-│   │   │   └── util/            # Utility classes
+│   │   │   ├── data/           # Database, Models, and Repository
+│   │   │   │   ├── CrowDbHelper.kt      # SQLite schema and operations
+│   │   │   │   ├── VideoEntity.kt       # Core video data model
+│   │   │   │   └── VideoRepository.kt   # Data access abstraction
+│   │   │   ├── player/          # Video player implementation
+│   │   │   ├── library/         # Library and playlist management
+│   │   │   ├── enhancement/    # Video processing and filters
+│   │   │   ├── settings/        # App configuration
+│   │   │   └── ui/              # Custom views and themes
 │   │   ├── res/
-│   │   │   ├── layout/          # XML layout files
-│   │   │   │   ├── activity_main.xml
-│   │   │   │   ├── activity_player.xml
-│   │   │   │   ├── activity_library.xml
-│   │   │   │   ├── activity_explore.xml
-│   │   │   │   ├── activity_settings.xml
-│   │   │   │   ├── activity_splash.xml
-│   │   │   │   ├── activity_folder_select.xml
-│   │   │   │   ├── activity_playback_memory.xml
-│   │   │   │   ├── activity_video_enhancement.xml
-│   │   │   │   └── item_*.xml   # List item layouts
-│   │   │   └── ...              # Other resources (drawables, values, etc.)
+│   │   │   ├── layout/          # XML layouts (activity_player.xml, etc.)
+│   │   │   ├── drawable/        # Vector icons and backgrounds
+│   │   │   └── values/          # Strings, colors, and themes
 │   │   └── AndroidManifest.xml
 │   └── build.gradle.kts
-├── build.gradle.kts
-├── gradle.properties
-├── settings.gradle.kts
+├── gradle/
+│   └── libs.versions.toml      # Centralized dependency management
 └── README.md
 ```
 
 ## Key Components
 
 ### Data Layer
-- **VideoEntity.kt**: Comprehensive data model for video information including metadata
-- **CrowDbHelper.kt**: Advanced SQLite database helper for managing video data, preferences, and playback history
-- **VideoRepository.kt**: Data access layer implementing repository pattern
-- **FolderScanner.kt**: Automated media file discovery and indexing
-- **AppPrefs.kt**: Application-wide preferences management
+- **CrowDbHelper.kt**: Manages multiple tables including `videos`, `chapters`, and `playlists`. Handles complex metadata and per-video preference storage.
+- **VideoEntity.kt**: Data class representing a video with over 30 properties including playback state, enhancement filters, and subtitle preferences.
+- **FolderScanner.kt**: Automated media discovery using `DocumentFile` and content resolvers.
 
 ### Feature Modules
-- **Player Module**: Advanced video player with ExoPlayer integration
-- **Library Module**: Video collection management and organization
-- **Enhancement Module**: Video quality and playback enhancement tools
-- **Memory Module**: Playback position persistence and resume functionality
-- **Explore Module**: Content discovery and browsing features
+- **Player Module**: Implements ExoPlayer with custom `TextureView` rendering and `enhancementOverlay`.
+- **Enhancement Module**: Provides real-time GL-based filters or software adjustments for video quality.
+- **Trim & Memory**: Logic for managing playback segments and persistence of last-watched positions.
 
-### UI Components
-- **Activities**: Main, Player, Library, Settings, Explore, Splash, and more
-- **Custom Views**: Specialized UI components for video cards and controls
-- **Layouts**: Comprehensive XML layouts with Material Design principles
+## Recent Improvements
+
+- **Timeline Trimming**: Added interactive seekbars and fine-tune buttons for setting video start/end points.
+- **Chapter Support**: Implemented ability to add, edit, and navigate via video chapters.
+- **Playlist Management**: Added infrastructure for creating and managing custom video playlists.
+- **Advanced Subtitles**: Enhanced subtitle customization including offset adjustments and styling.
+- **UI Refresh**: Updated `activity_player.xml` with modern card-based control groups and Orbitron font integration.
+
+## Database Schema
+
+The SQLite database (`crow_theatron.db`) stores:
+- **Video Metadata**: URI, duration, size, resolution, and format.
+- **Playback State**: Last position, favorite status, and "last played" timestamps.
+- **Visual Filters**: Per-video settings for brightness, contrast, zoom, crop, etc.
+- **Audio/Subtitles**: Volume, pitch/key, speed, subtitle tracks, and offsets.
+- **Organizational Data**: Custom chapters and playlist associations.
 
 ## Getting Started
 
 ### Prerequisites
-
-- Android Studio Hedgehog or later
-- Android SDK (API level 26 or higher)
-- Kotlin 1.9+
-- Java 17
+- Android Studio Ladybug or later
+- Android SDK (API level 26+)
+- JDK 17
 
 ### Installation
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/Chris654Cajes/Crow-Theatron-Android.git
-   ```
-
-2. Open the project in Android Studio
-
-3. Sync the project with Gradle files
-
-4. Build and run the application on an emulator or physical device
-
-### Build Configuration
-
-The project uses modern Android Gradle configuration with Kotlin DSL and Version Catalogs. Key requirements:
-- **Compile SDK**: 36
-- **Min SDK**: 26 (Android 8.0)
-- **Target SDK**: 36 (Android 14)
-- **Java Version**: 17
-- **Kotlin Target JVM**: 17
-
-### Dependencies
-
-Managed via `gradle/libs.versions.toml`:
-- **ExoPlayer (Media3)**: Advanced media playback (1.5.1)
-- **AndroidX Core KTX**: 1.17.0
-- **AndroidX AppCompat**: 1.7.1
-- **Material Design 3**: 1.13.0
-- **Kotlin Coroutines**: 1.9.0
-- **Lifecycle Components**: 2.8.7
-- **CoordinatorLayout**: 1.3.0
-- **DocumentFile**: 1.1.0
-
-## Recent Improvements
-
-- **Dependency Management**: Migrated all dependencies to Gradle Version Catalogs for better maintenance and security.
-- **Code Quality**: Performed a sweep of warnings and fixed redundant qualifiers and inefficient logic in database operations.
-- **Project Structure**: Cleaned up `.gitignore` to follow modern Android development standards.
-- **Stability**: Updated to the latest stable versions of core libraries.
-
-## Database Schema
-
-The app uses a comprehensive SQLite database to store:
-- **Video Metadata**: File paths, duration, resolution, format information
-- **Playback History**: Recently watched videos with timestamps
-- **User Preferences**: App settings and customization options
-- **Playback Memory**: Video positions for resume functionality
-- **Enhancement Settings**: Video enhancement preferences per video
-
-## Contributing
-
-We welcome contributions to Crow Theatron! Please follow these guidelines:
-
-1. **Fork the repository** and create a feature branch
-2. **Follow the existing code style** and architecture patterns
-3. **Test thoroughly** on both emulators and physical devices
-4. **Update documentation** for any new features
-5. **Submit a pull request** with a clear description of changes
-
-### Development Guidelines
-- Use Kotlin coding conventions
-- Follow Android architecture best practices
-- Ensure backward compatibility with Android 8.0+
-- Add appropriate error handling and user feedback
-- Test with various video formats and file sizes
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contact
-
-For questions, bug reports, or feature requests:
-- **Issues**: Open an issue on GitHub
-- **Discussions**: Use GitHub Discussions for general questions
-- **Email**: [Your contact email if applicable]
+1. Clone the repository.
+2. Open in Android Studio.
+3. Sync Gradle and run on a device with API 26+.
 
 ## App Features Showcase
 
-### 🎬 Video Player
-- Support for multiple video formats (MP4, AVI, MKV, etc.)
-- Gesture controls for brightness, volume, and seek
-- Picture-in-picture mode support
-- Subtitle support
+### 🎬 Advanced Player
+- **Gesture Controls**: Vertical swipes for brightness/volume, horizontal for seek, pinch-to-zoom.
+- **Picture-in-Picture**: Seamless multi-tasking support.
+- **Playback Speed & Pitch**: Adjust speed from 0.25x to 3.0x and pitch in semitones.
 
-### 📚 Library Management
-- Automatic video detection and indexing
-- Folder-based organization
-- Metadata extraction and display
-- Search and filter capabilities
+### 🎨 Visual & Audio Suite
+- **Real-time Enhancement**: Toggleable filters for better clarity.
+- **Equalizer**: Presets for different audio profiles.
+- **Zoom/Crop**: Adjust aspect ratio to fit any screen.
 
-### 🎨 Video Enhancement
-- Brightness and contrast adjustments
-- Saturation and hue controls
-- Playback speed adjustment
-- Audio enhancement options
-
-### 🧠 Smart Features
-- Resume playback from last position
-- Recently watched videos tracking
-- Favorite videos management
-- Playback history with timestamps
+### 📚 Smart Library
+- **Automatic Indexing**: Background scanning of selected folders.
+- **Continue Watching**: Quick access to partially watched videos.
+- **Global Search**: Search across all indexed folders.
 
 ---
-
-**Note**: This is an advanced Android project that requires appropriate development environment setup. The app is designed for modern Android devices and takes full advantage of the latest Android features while maintaining backward compatibility.
+© 2024 Christopher Lee Cajes. All rights reserved.

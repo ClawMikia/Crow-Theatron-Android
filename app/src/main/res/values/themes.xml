@@ -8,17 +8,29 @@
         <item name="android:colorBackground">@color/crow_bg</item>
         <item name="colorSurface">@color/crow_surface</item>
         <item name="colorOnSurface">@color/crow_on_bg</item>
-        <item name="android:statusBarColor">@color/crow_pure_black</item>
-        <item name="android:navigationBarColor">@color/crow_pure_black</item>
+        <item name="android:statusBarColor">@color/crow_surface</item>
+        <item name="android:navigationBarColor">@color/crow_surface</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:navigationBarDividerColor">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowTranslucentNavigation">false</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="materialButtonStyle">@style/Widget.CrowTheatron.Button</item>
+        <item name="toolbarStyle">@style/Widget.CrowTheatron.Toolbar</item>
     </style>
 
     <style name="Theme.CrowTheatron" parent="Theme.CrowTheatron.V26" />
+
+    <style name="Widget.CrowTheatron.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="titleTextColor">@color/crow_accent_yellow</item>
+        <item name="navigationIconTint">@color/crow_accent_yellow</item>
+        <item name="titleTextAppearance">@style/TextAppearance.CrowTheatron.Toolbar.Title</item>
+    </style>
+
+    <style name="TextAppearance.CrowTheatron.Toolbar.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">@font/orbitron_bold</item>
+        <item name="android:textSize">18sp</item>
+    </style>
 
     <style name="Widget.CrowTheatron.Button" parent="Widget.Material3.Button.TonalButton">
         <item name="backgroundTint">@color/crow_surface_elevated</item>

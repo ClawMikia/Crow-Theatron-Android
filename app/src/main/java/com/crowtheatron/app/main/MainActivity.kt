@@ -31,6 +31,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnPickFolder.setOnClickListener { BottomNavHelper.openFolderSelect(this) }
 
+        binding.btnPlaylists.setOnClickListener {
+            startActivity(Intent(this, com.crowtheatron.app.playlist.PlaylistListActivity::class.java))
+        }
+
         binding.btnOpenLibrary.setOnClickListener {
             startActivity(
                 Intent(this, LibraryActivity::class.java)
@@ -49,11 +53,10 @@ class MainActivity : AppCompatActivity() {
         binding.btnResetLibrary.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("Reset library?")
-                .setMessage("This will delete all videos from the library, including playback history, profiles, chapters and preferences. This cannot be undone.")
+                .setMessage("This will delete all videos from the library, including playback history, chapters and preferences. This cannot be undone.")
                 .setPositiveButton("Reset") { _, _ ->
                     val db = CrowDbHelper(this)
                     db.writableDatabase.execSQL("DELETE FROM ${CrowDbHelper.TABLE_VIDEOS}")
-                    db.writableDatabase.execSQL("DELETE FROM ${CrowDbHelper.TABLE_PROFILES}")
                     db.writableDatabase.execSQL("DELETE FROM ${CrowDbHelper.TABLE_CHAPTERS}")
                     db.close()
                     BottomNavHelper.openFolderSelect(this)

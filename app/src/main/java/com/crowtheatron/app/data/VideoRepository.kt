@@ -49,62 +49,6 @@ class VideoRepository(context: Context) {
     fun savePreferences(entity: VideoEntity) = db.updatePreferences(entity)
     fun setFavorite(id: Long, favorite: Boolean) = db.setFavorite(id, favorite)
 
-    // ── Playback Profiles ─────────────────────────────────────────────────────
-
-    fun createProfile(profile: PlaybackProfile): Long = db.insertProfile(profile)
-
-    fun updateProfile(profile: PlaybackProfile) = db.updateProfile(profile)
-
-    fun deleteProfile(id: Long) = db.deleteProfile(id)
-
-    fun getProfile(id: Long): PlaybackProfile? = db.getProfile(id)
-
-    fun listProfilesForVideo(videoId: Long): List<PlaybackProfile> =
-        db.listProfilesForVideo(videoId)
-
-    fun getDefaultProfile(videoId: Long): PlaybackProfile? = db.getDefaultProfile(videoId)
-
-    /**
-     * Duplicate an existing profile with a new name.
-     * Returns the id of the new profile.
-     */
-    fun duplicateProfile(profileId: Long, newName: String): Long? {
-        val src = db.getProfile(profileId) ?: return null
-        return db.insertProfile(src.copy(id = 0L, name = newName, isDefault = false,
-            createdAt = System.currentTimeMillis()))
-    }
-
-    /**
-     * Apply a PlaybackProfile onto a VideoEntity, returning the updated copy.
-     * Use this when switching profiles to instantly load all saved settings.
-     */
-    fun applyProfileToEntity(entity: VideoEntity, profile: PlaybackProfile): VideoEntity =
-        entity.copy(
-            playbackSpeed          = profile.playbackSpeed,
-            volumeLevel            = profile.volumeLevel,
-            audioBoost             = profile.audioBoost,
-            eqPreset               = profile.eqPreset,
-            loopPlayback           = profile.loopPlayback,
-            autoPlayNext           = profile.autoPlayNext,
-            pitchSemitones         = profile.pitchSemitones,
-            trimStartMs            = profile.trimStartMs,
-            trimEndMs              = profile.trimEndMs,
-            enhancement            = profile.enhancement,
-            brightness             = profile.brightness,
-            contrast               = profile.contrast,
-            saturation             = profile.saturation,
-            hue                    = profile.hue,
-            sharpness              = profile.sharpness,
-            zoomLevel              = profile.zoomLevel,
-            cropMode               = profile.cropMode,
-            subtitleTrackIndex     = profile.subtitleTrackIndex,
-            subtitleOffsetMs       = profile.subtitleOffsetMs,
-            subtitleSizeSp         = profile.subtitleSizeSp,
-            subtitleBold           = profile.subtitleBold,
-            subtitleBackgroundAlpha = profile.subtitleBackgroundAlpha,
-            activeProfileId        = profile.id,
-        )
-
     // ── Chapter Markers ───────────────────────────────────────────────────────
 
     fun addChapter(videoId: Long, positionMs: Long, label: String, auto: Boolean = false): Long =
@@ -117,4 +61,14 @@ class VideoRepository(context: Context) {
     fun deleteChapter(id: Long) = db.deleteChapter(id)
     fun deleteAllChapters(videoId: Long) = db.deleteChaptersForVideo(videoId)
     fun listChapters(videoId: Long): List<ChapterMarker> = db.listChaptersForVideo(videoId)
+
+    // ── Playlists ─────────────────────────────────────────────────────────────
+
+    fun createPlaylist(title: String): Long = db.insertPlaylist(title)
+    fun deletePlaylist(id: Long) = db.deletePlaylist(id)
+    fun renamePlaylist(id: Long, newTitle: String) = db.renamePlaylist(id, newTitle)
+    fun listPlaylists(): List<Pair<Long, String>> = db.listPlaylists()
+    fun addVideoToPlaylist(playlistId: Long, videoId: Long) = db.addVideoToPlaylist(playlistId, videoId)
+    fun removeVideoFromPlaylist(playlistId: Long, videoId: Long) = db.removeVideoFromPlaylist(playlistId, videoId)
+    fun getVideosInPlaylist(playlistId: Long): List<VideoEntity> = db.getVideosInPlaylist(playlistId)
 }

@@ -67,6 +67,20 @@
                 app:iconTint="@color/crow_bg"
                 app:cornerRadius="12dp" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnChooseFiles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/pick_files"
+                android:textColor="@color/crow_bg"
+                android:paddingTop="14dp"
+                android:paddingBottom="14dp"
+                app:backgroundTint="@color/crow_accent_cyan"
+                app:icon="@android:drawable/ic_input_add"
+                app:iconTint="@color/crow_bg"
+                app:cornerRadius="12dp" />
+
             <ProgressBar
                 android:id="@+id/progress"
                 style="?android:attr/progressBarStyleLarge"

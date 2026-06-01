@@ -39,18 +39,35 @@ class FolderSelectActivity : AppCompatActivity() {
         scanAndImport(uri)
     }
 
+    private val openFiles = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
+        if (uris == null || uris.isEmpty()) {
+            return@registerForActivityResult
+        }
+        uris.forEach { uri ->
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {}
+        }
+        importFiles(uris)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityFolderSelectBinding.inflate(layoutInflater)
         setContentWithCrowInsets(binding.root)
 
         binding.btnChoose.setOnClickListener { openTree.launch(null) }
+        binding.btnChooseFiles.setOnClickListener { openFiles.launch(arrayOf("video/*")) }
     }
 
     private fun scanAndImport(treeUri: Uri) {
         binding.progress.visibility = View.VISIBLE
         binding.status.text = getString(com.crowtheatron.app.R.string.scanning)
         binding.btnChoose.isEnabled = false
+        binding.btnChooseFiles.isEnabled = false
         lifecycleScope.launch {
             val videos = withContext(Dispatchers.IO) {
                 FolderScanner.scanTreeUri(this@FolderSelectActivity, treeUri)
@@ -58,9 +75,31 @@ class FolderSelectActivity : AppCompatActivity() {
             if (videos.isEmpty()) {
                 binding.progress.visibility = View.GONE
                 binding.btnChoose.isEnabled = true
+                binding.btnChooseFiles.isEnabled = true
                 binding.status.text = "No video files found in that folder."
                 Toast.makeText(this@FolderSelectActivity, binding.status.text, Toast.LENGTH_SHORT).show()
                 return@launch
+            }
+            withContext(Dispatchers.IO) {
+                repo.importScanResults(videos, withThumbnails = true)
+            }
+            Toast.makeText(
+                this@FolderSelectActivity,
+                "Imported ${videos.size} videos",
+                Toast.LENGTH_SHORT
+            ).show()
+            finish()
+        }
+    }
+
+    private fun importFiles(uris: List<Uri>) {
+        binding.progress.visibility = View.VISIBLE
+        binding.status.text = "Importing videos…"
+        binding.btnChoose.isEnabled = false
+        binding.btnChooseFiles.isEnabled = false
+        lifecycleScope.launch {
+            val videos = withContext(Dispatchers.IO) {
+                FolderScanner.resolveUris(this@FolderSelectActivity, uris)
             }
             withContext(Dispatchers.IO) {
                 repo.importScanResults(videos, withThumbnails = true)

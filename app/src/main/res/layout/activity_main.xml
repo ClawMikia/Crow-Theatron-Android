@@ -14,8 +14,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:title="@string/app_name"
-        app:titleTextColor="@color/crow_accent_yellow" />
+        app:title="@string/app_name" />
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll"
@@ -78,6 +77,24 @@
                 app:iconPadding="14dp"
                 app:iconTint="@color/crow_accent_cyan"
                 app:strokeColor="@color/crow_accent_cyan" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPlaylists"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="20dp"
+                android:gravity="start|center_vertical"
+                android:text="My Playlists"
+                android:textColor="@color/crow_accent_yellow"
+                app:icon="@android:drawable/ic_menu_add"
+                app:iconGravity="textStart"
+                app:iconSize="20dp"
+                app:iconPadding="14dp"
+                app:iconTint="@color/crow_accent_yellow"
+                app:strokeColor="@color/crow_accent_yellow" />
 
 
             <com.google.android.material.button.MaterialButton

@@ -5,7 +5,7 @@
     <style name="Theme.CrowTheatron" parent="Theme.CrowTheatron.V26">
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:enforceNavigationBarContrast">true</item>
-        <item name="android:navigationBarColor">@color/crow_pure_black</item>
+        <item name="android:navigationBarColor">@color/crow_surface</item>
         <item name="android:navigationBarDividerColor">@android:color/transparent</item>
         <item name="android:windowTranslucentNavigation">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>

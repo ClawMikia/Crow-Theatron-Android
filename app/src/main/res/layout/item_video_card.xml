@@ -35,6 +35,19 @@
                 android:contentDescription="@null"
                 android:src="@android:drawable/ic_media_play"
                 app:tint="@color/crow_accent_red" />
+
+            <ImageButton
+                android:id="@+id/btnRemove"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="top|end"
+                android:layout_margin="6dp"
+                android:background="@drawable/bg_button_outline_red"
+                android:padding="6dp"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:visibility="gone"
+                app:tint="@color/crow_accent_red"
+                tools:visibility="visible" />
         </FrameLayout>
 
         <LinearLayout

@@ -14,40 +14,16 @@ class CrowDbHelper(context: Context) :
         db.execSQL("CREATE INDEX idx_videos_folder   ON $TABLE_VIDEOS($COL_FOLDER)")
         db.execSQL("CREATE INDEX idx_videos_favorite ON $TABLE_VIDEOS($COL_FAVORITE)")
         db.execSQL("CREATE INDEX idx_videos_played   ON $TABLE_VIDEOS($COL_LAST_PLAYED)")
-        db.execSQL(CREATE_PROFILES)
-        db.execSQL("CREATE INDEX idx_profiles_video  ON $TABLE_PROFILES($PRO_VIDEO_ID)")
         db.execSQL(CREATE_CHAPTERS)
         db.execSQL("CREATE INDEX idx_chapters_video  ON $TABLE_CHAPTERS($CHA_VIDEO_ID)")
+        db.execSQL(CREATE_PLAYLISTS)
+        db.execSQL(CREATE_PLAYLIST_VIDEOS)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < 2) {
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_SPEED REAL NOT NULL DEFAULT 1.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_VOLUME REAL NOT NULL DEFAULT 1.0") }
-        }
-        if (oldVersion < 3) {
-            // Extended enhancement sliders
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_BRIGHTNESS REAL NOT NULL DEFAULT 0.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_CONTRAST REAL NOT NULL DEFAULT 1.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_SATURATION REAL NOT NULL DEFAULT 1.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_HUE REAL NOT NULL DEFAULT 0.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_SHARPNESS REAL NOT NULL DEFAULT 0.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_ZOOM REAL NOT NULL DEFAULT 1.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_CROP TEXT NOT NULL DEFAULT 'FIT'") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_AUDIO_BOOST REAL NOT NULL DEFAULT 1.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_EQ_PRESET TEXT NOT NULL DEFAULT 'FLAT'") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_SUB_TRACK INTEGER NOT NULL DEFAULT -1") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_SUB_OFFSET INTEGER NOT NULL DEFAULT 0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_SUB_SIZE REAL NOT NULL DEFAULT 16.0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_SUB_BOLD INTEGER NOT NULL DEFAULT 0") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_SUB_BG_ALPHA INTEGER NOT NULL DEFAULT 128") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_ORIENTATION INTEGER NOT NULL DEFAULT -1") }
-            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN $COL_ACTIVE_PROFILE INTEGER NOT NULL DEFAULT 0") }
-            // New tables
-            runCatching { db.execSQL(CREATE_PROFILES) }
-            runCatching { db.execSQL("CREATE INDEX IF NOT EXISTS idx_profiles_video ON $TABLE_PROFILES($PRO_VIDEO_ID)") }
-            runCatching { db.execSQL(CREATE_CHAPTERS) }
-            runCatching { db.execSQL("CREATE INDEX IF NOT EXISTS idx_chapters_video ON $TABLE_CHAPTERS($CHA_VIDEO_ID)") }
+        if (oldVersion < 4) {
+            runCatching { db.execSQL(CREATE_PLAYLISTS) }
+            runCatching { db.execSQL(CREATE_PLAYLIST_VIDEOS) }
         }
     }
 
@@ -193,60 +169,6 @@ class CrowDbHelper(context: Context) :
         writableDatabase.delete(TABLE_VIDEOS, "$COL_ID = ?", arrayOf(id.toString()))
     }
 
-    // ── Playback Profiles ──────────────────────────────────────────────────────
-
-    fun insertProfile(p: PlaybackProfile): Long {
-        val db = writableDatabase
-        // If setting as default, clear existing default for this video
-        if (p.isDefault) clearDefaultProfiles(db, p.videoId)
-        return db.insert(TABLE_PROFILES, null, p.toContentValues())
-    }
-
-    fun updateProfile(p: PlaybackProfile) {
-        val db = writableDatabase
-        if (p.isDefault) clearDefaultProfiles(db, p.videoId, excludeId = p.id)
-        db.update(TABLE_PROFILES, p.toContentValues(), "$PRO_ID = ?", arrayOf(p.id.toString()))
-    }
-
-    fun deleteProfile(id: Long) {
-        writableDatabase.delete(TABLE_PROFILES, "$PRO_ID = ?", arrayOf(id.toString()))
-    }
-
-    fun getProfile(id: Long): PlaybackProfile? {
-        readableDatabase.query(
-            TABLE_PROFILES, null, "$PRO_ID = ?", arrayOf(id.toString()),
-            null, null, null
-        ).use { c -> if (c.moveToFirst()) return c.toProfile() }
-        return null
-    }
-
-    fun listProfilesForVideo(videoId: Long): List<PlaybackProfile> {
-        val list = mutableListOf<PlaybackProfile>()
-        readableDatabase.query(
-            TABLE_PROFILES, null, "$PRO_VIDEO_ID = ?", arrayOf(videoId.toString()),
-            null, null, "$PRO_CREATED_AT ASC"
-        ).use { c -> while (c.moveToNext()) list.add(c.toProfile()) }
-        return list
-    }
-
-    fun getDefaultProfile(videoId: Long): PlaybackProfile? {
-        readableDatabase.query(
-            TABLE_PROFILES, null, "$PRO_VIDEO_ID = ? AND $PRO_IS_DEFAULT = 1", arrayOf(videoId.toString()),
-            null, null, null, "1"
-        ).use { c -> if (c.moveToFirst()) return c.toProfile() }
-        return null
-    }
-
-    private fun clearDefaultProfiles(db: SQLiteDatabase, videoId: Long, excludeId: Long = -1L) {
-        val cv = ContentValues().apply { put(PRO_IS_DEFAULT, 0) }
-        if (excludeId > 0) {
-            db.update(TABLE_PROFILES, cv, "$PRO_VIDEO_ID = ? AND $PRO_ID != ?",
-                arrayOf(videoId.toString(), excludeId.toString()))
-        } else {
-            db.update(TABLE_PROFILES, cv, "$PRO_VIDEO_ID = ?", arrayOf(videoId.toString()))
-        }
-    }
-
     // ── Chapter Markers ────────────────────────────────────────────────────────
 
     fun insertChapter(c: ChapterMarker): Long =
@@ -273,9 +195,67 @@ class CrowDbHelper(context: Context) :
         return list
     }
 
+    // ── Playlists ──────────────────────────────────────────────────────────────
+
+    fun insertPlaylist(title: String): Long {
+        val cv = ContentValues().apply {
+            put(PLA_TITLE, title)
+            put(PLA_CREATED_AT, System.currentTimeMillis())
+        }
+        return writableDatabase.insert(TABLE_PLAYLISTS, null, cv)
+    }
+
+    fun deletePlaylist(id: Long) {
+        writableDatabase.delete(TABLE_PLAYLISTS, "$PLA_ID = ?", arrayOf(id.toString()))
+        writableDatabase.delete(TABLE_PLAYLIST_VIDEOS, "$PLV_PLAYLIST_ID = ?", arrayOf(id.toString()))
+    }
+
+    fun renamePlaylist(id: Long, newTitle: String) {
+        val cv = ContentValues().apply { put(PLA_TITLE, newTitle) }
+        writableDatabase.update(TABLE_PLAYLISTS, cv, "$PLA_ID = ?", arrayOf(id.toString()))
+    }
+
+    fun addVideoToPlaylist(playlistId: Long, videoId: Long) {
+        val cv = ContentValues().apply {
+            put(PLV_PLAYLIST_ID, playlistId)
+            put(PLV_VIDEO_ID, videoId)
+            // Auto-increment position? 
+            put(PLV_POSITION, System.currentTimeMillis())
+        }
+        writableDatabase.insert(TABLE_PLAYLIST_VIDEOS, null, cv)
+    }
+
+    fun removeVideoFromPlaylist(playlistId: Long, videoId: Long) {
+        writableDatabase.delete(TABLE_PLAYLIST_VIDEOS, "$PLV_PLAYLIST_ID = ? AND $PLV_VIDEO_ID = ?",
+            arrayOf(playlistId.toString(), videoId.toString()))
+    }
+
+    fun listPlaylists(): List<Pair<Long, String>> {
+        val list = mutableListOf<Pair<Long, String>>()
+        readableDatabase.query(TABLE_PLAYLISTS, null, null, null, null, null, "$PLA_TITLE ASC")
+            .use { c -> while (c.moveToNext()) {
+                list.add(c.getLong(c.getColumnIndex(PLA_ID)) to c.getString(c.getColumnIndex(PLA_TITLE)))
+            }}
+        return list
+    }
+
+    fun getVideosInPlaylist(playlistId: Long): List<VideoEntity> {
+        val list = mutableListOf<VideoEntity>()
+        val query = """
+            SELECT v.* FROM $TABLE_VIDEOS v
+            JOIN $TABLE_PLAYLIST_VIDEOS pv ON v.$COL_ID = pv.$PLV_VIDEO_ID
+            WHERE pv.$PLV_PLAYLIST_ID = ?
+            ORDER BY pv.$PLV_POSITION ASC
+        """
+        readableDatabase.rawQuery(query, arrayOf(playlistId.toString())).use { c ->
+            while (c.moveToNext()) list.add(c.toEntity())
+        }
+        return list
+    }
+
     companion object {
         const val DB_NAME    = "crow_theatron.db"
-        const val DB_VERSION = 3
+        const val DB_VERSION = 4
 
         // ── videos table ──────────────────────────────────────────────────────
         const val TABLE_VIDEOS          = "videos"
@@ -355,68 +335,6 @@ class CrowDbHelper(context: Context) :
             )
         """.trimIndent()
 
-        // ── playback_profiles table ────────────────────────────────────────────
-        const val TABLE_PROFILES        = "playback_profiles"
-        const val PRO_ID                = "id"
-        const val PRO_VIDEO_ID          = "video_id"
-        const val PRO_NAME              = "name"
-        const val PRO_IS_DEFAULT        = "is_default"
-        const val PRO_CREATED_AT        = "created_at"
-        const val PRO_SPEED             = "speed"
-        const val PRO_VOLUME            = "volume"
-        const val PRO_AUDIO_BOOST       = "audio_boost"
-        const val PRO_EQ_PRESET         = "eq_preset"
-        const val PRO_LOOP              = "loop"
-        const val PRO_AUTO_NEXT         = "auto_next"
-        const val PRO_PITCH             = "pitch"
-        const val PRO_TRIM_START        = "trim_start_ms"
-        const val PRO_TRIM_END          = "trim_end_ms"
-        const val PRO_ENHANCEMENT       = "enhancement"
-        const val PRO_BRIGHTNESS        = "brightness"
-        const val PRO_CONTRAST          = "contrast"
-        const val PRO_SATURATION        = "saturation"
-        const val PRO_HUE               = "hue"
-        const val PRO_SHARPNESS         = "sharpness"
-        const val PRO_ZOOM              = "zoom"
-        const val PRO_CROP              = "crop"
-        const val PRO_SUB_TRACK         = "sub_track"
-        const val PRO_SUB_OFFSET        = "sub_offset_ms"
-        const val PRO_SUB_SIZE          = "sub_size_sp"
-        const val PRO_SUB_BOLD          = "sub_bold"
-        const val PRO_SUB_BG_ALPHA      = "sub_bg_alpha"
-
-        private val CREATE_PROFILES = """
-            CREATE TABLE $TABLE_PROFILES (
-                $PRO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                $PRO_VIDEO_ID INTEGER NOT NULL,
-                $PRO_NAME TEXT NOT NULL,
-                $PRO_IS_DEFAULT INTEGER NOT NULL DEFAULT 0,
-                $PRO_CREATED_AT INTEGER NOT NULL DEFAULT 0,
-                $PRO_SPEED REAL NOT NULL DEFAULT 1.0,
-                $PRO_VOLUME REAL NOT NULL DEFAULT 1.0,
-                $PRO_AUDIO_BOOST REAL NOT NULL DEFAULT 1.0,
-                $PRO_EQ_PRESET TEXT NOT NULL DEFAULT 'FLAT',
-                $PRO_LOOP INTEGER NOT NULL DEFAULT 0,
-                $PRO_AUTO_NEXT INTEGER NOT NULL DEFAULT 0,
-                $PRO_PITCH INTEGER NOT NULL DEFAULT 0,
-                $PRO_TRIM_START INTEGER NOT NULL DEFAULT 0,
-                $PRO_TRIM_END INTEGER NOT NULL DEFAULT 0,
-                $PRO_ENHANCEMENT TEXT NOT NULL DEFAULT 'NONE',
-                $PRO_BRIGHTNESS REAL NOT NULL DEFAULT 0.0,
-                $PRO_CONTRAST REAL NOT NULL DEFAULT 1.0,
-                $PRO_SATURATION REAL NOT NULL DEFAULT 1.0,
-                $PRO_HUE REAL NOT NULL DEFAULT 0.0,
-                $PRO_SHARPNESS REAL NOT NULL DEFAULT 0.0,
-                $PRO_ZOOM REAL NOT NULL DEFAULT 1.0,
-                $PRO_CROP TEXT NOT NULL DEFAULT 'FIT',
-                $PRO_SUB_TRACK INTEGER NOT NULL DEFAULT -1,
-                $PRO_SUB_OFFSET INTEGER NOT NULL DEFAULT 0,
-                $PRO_SUB_SIZE REAL NOT NULL DEFAULT 16.0,
-                $PRO_SUB_BOLD INTEGER NOT NULL DEFAULT 0,
-                $PRO_SUB_BG_ALPHA INTEGER NOT NULL DEFAULT 128
-            )
-        """.trimIndent()
-
         // ── chapters table ────────────────────────────────────────────────────
         const val TABLE_CHAPTERS        = "chapter_markers"
         const val CHA_ID                = "id"
@@ -434,6 +352,35 @@ class CrowDbHelper(context: Context) :
                 $CHA_LABEL TEXT NOT NULL,
                 $CHA_AUTO INTEGER NOT NULL DEFAULT 0,
                 $CHA_CREATED_AT INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent()
+
+        // ── playlists table ────────────────────────────────────────────────────
+        const val TABLE_PLAYLISTS       = "playlists"
+        const val PLA_ID                = "id"
+        const val PLA_TITLE             = "title"
+        const val PLA_CREATED_AT        = "created_at"
+
+        private val CREATE_PLAYLISTS = """
+            CREATE TABLE $TABLE_PLAYLISTS (
+                $PLA_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                $PLA_TITLE TEXT NOT NULL,
+                $PLA_CREATED_AT INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent()
+
+        // ── playlist_videos table (junction) ───────────────────────────────────
+        const val TABLE_PLAYLIST_VIDEOS = "playlist_videos"
+        const val PLV_PLAYLIST_ID       = "playlist_id"
+        const val PLV_VIDEO_ID          = "video_id"
+        const val PLV_POSITION          = "position"
+
+        private val CREATE_PLAYLIST_VIDEOS = """
+            CREATE TABLE $TABLE_PLAYLIST_VIDEOS (
+                $PLV_PLAYLIST_ID INTEGER NOT NULL,
+                $PLV_VIDEO_ID INTEGER NOT NULL,
+                $PLV_POSITION INTEGER NOT NULL,
+                PRIMARY KEY ($PLV_PLAYLIST_ID, $PLV_VIDEO_ID)
             )
         """.trimIndent()
     }
@@ -525,73 +472,6 @@ private fun Cursor.toEntity(): VideoEntity {
         subtitleBackgroundAlpha = int(CrowDbHelper.COL_SUB_BG_ALPHA, 128),
         preferredOrientation   = int(CrowDbHelper.COL_ORIENTATION, -1),
         activeProfileId        = lng(CrowDbHelper.COL_ACTIVE_PROFILE),
-    )
-}
-
-// ── Extension: PlaybackProfile ↔ ContentValues ──────────────────────────────
-
-private fun PlaybackProfile.toContentValues(): ContentValues = ContentValues().apply {
-    put(CrowDbHelper.PRO_VIDEO_ID,    videoId)
-    put(CrowDbHelper.PRO_NAME,        name)
-    put(CrowDbHelper.PRO_IS_DEFAULT,  if (isDefault) 1 else 0)
-    put(CrowDbHelper.PRO_CREATED_AT,  createdAt)
-    put(CrowDbHelper.PRO_SPEED,       playbackSpeed)
-    put(CrowDbHelper.PRO_VOLUME,      volumeLevel)
-    put(CrowDbHelper.PRO_AUDIO_BOOST, audioBoost)
-    put(CrowDbHelper.PRO_EQ_PRESET,   eqPreset.storageKey)
-    put(CrowDbHelper.PRO_LOOP,        if (loopPlayback) 1 else 0)
-    put(CrowDbHelper.PRO_AUTO_NEXT,   if (autoPlayNext) 1 else 0)
-    put(CrowDbHelper.PRO_PITCH,       pitchSemitones)
-    put(CrowDbHelper.PRO_TRIM_START,  trimStartMs)
-    put(CrowDbHelper.PRO_TRIM_END,    trimEndMs)
-    put(CrowDbHelper.PRO_ENHANCEMENT, enhancement.storageKey)
-    put(CrowDbHelper.PRO_BRIGHTNESS,  brightness)
-    put(CrowDbHelper.PRO_CONTRAST,    contrast)
-    put(CrowDbHelper.PRO_SATURATION,  saturation)
-    put(CrowDbHelper.PRO_HUE,         hue)
-    put(CrowDbHelper.PRO_SHARPNESS,   sharpness)
-    put(CrowDbHelper.PRO_ZOOM,        zoomLevel)
-    put(CrowDbHelper.PRO_CROP,        cropMode.storageKey)
-    put(CrowDbHelper.PRO_SUB_TRACK,   subtitleTrackIndex)
-    put(CrowDbHelper.PRO_SUB_OFFSET,  subtitleOffsetMs)
-    put(CrowDbHelper.PRO_SUB_SIZE,    subtitleSizeSp)
-    put(CrowDbHelper.PRO_SUB_BOLD,    if (subtitleBold) 1 else 0)
-    put(CrowDbHelper.PRO_SUB_BG_ALPHA, subtitleBackgroundAlpha)
-}
-
-private fun android.database.Cursor.toProfile(): PlaybackProfile {
-    fun str(col: String): String? = getColumnIndex(col).takeIf { it >= 0 }?.let { getString(it) }
-    fun lng(col: String, def: Long = 0L): Long = getColumnIndex(col).takeIf { it >= 0 }?.let { getLong(it) } ?: def
-    fun int(col: String, def: Int = 0): Int = getColumnIndex(col).takeIf { it >= 0 }?.let { getInt(it) } ?: def
-    fun flt(col: String, def: Float = 0f): Float = getColumnIndex(col).takeIf { it >= 0 }?.let { getFloat(it) } ?: def
-    return PlaybackProfile(
-        id                     = lng(CrowDbHelper.PRO_ID),
-        videoId                = lng(CrowDbHelper.PRO_VIDEO_ID),
-        name                   = str(CrowDbHelper.PRO_NAME) ?: "Default",
-        isDefault              = int(CrowDbHelper.PRO_IS_DEFAULT) == 1,
-        createdAt              = lng(CrowDbHelper.PRO_CREATED_AT),
-        playbackSpeed          = flt(CrowDbHelper.PRO_SPEED, 1f),
-        volumeLevel            = flt(CrowDbHelper.PRO_VOLUME, 1f),
-        audioBoost             = flt(CrowDbHelper.PRO_AUDIO_BOOST, 1f),
-        eqPreset               = EqPreset.fromKey(str(CrowDbHelper.PRO_EQ_PRESET)),
-        loopPlayback           = int(CrowDbHelper.PRO_LOOP) == 1,
-        autoPlayNext           = int(CrowDbHelper.PRO_AUTO_NEXT) == 1,
-        pitchSemitones         = int(CrowDbHelper.PRO_PITCH),
-        trimStartMs            = lng(CrowDbHelper.PRO_TRIM_START),
-        trimEndMs              = lng(CrowDbHelper.PRO_TRIM_END),
-        enhancement            = EnhancementMode.fromKey(str(CrowDbHelper.PRO_ENHANCEMENT)),
-        brightness             = flt(CrowDbHelper.PRO_BRIGHTNESS),
-        contrast               = flt(CrowDbHelper.PRO_CONTRAST, 1f),
-        saturation             = flt(CrowDbHelper.PRO_SATURATION, 1f),
-        hue                    = flt(CrowDbHelper.PRO_HUE),
-        sharpness              = flt(CrowDbHelper.PRO_SHARPNESS),
-        zoomLevel              = flt(CrowDbHelper.PRO_ZOOM, 1f),
-        cropMode               = CropMode.fromKey(str(CrowDbHelper.PRO_CROP)),
-        subtitleTrackIndex     = int(CrowDbHelper.PRO_SUB_TRACK, -1),
-        subtitleOffsetMs       = lng(CrowDbHelper.PRO_SUB_OFFSET),
-        subtitleSizeSp         = flt(CrowDbHelper.PRO_SUB_SIZE, 16f),
-        subtitleBold           = int(CrowDbHelper.PRO_SUB_BOLD) == 1,
-        subtitleBackgroundAlpha = int(CrowDbHelper.PRO_SUB_BG_ALPHA, 128),
     )
 }
 

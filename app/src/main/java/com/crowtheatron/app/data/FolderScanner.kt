@@ -69,6 +69,26 @@ object FolderScanner {
         return mapMime?.startsWith("video/") == true || ext in VIDEO_EXTENSIONS
     }
 
+    suspend fun resolveUris(context: Context, uris: List<Uri>): List<VideoEntity> = withContext(Dispatchers.IO) {
+        val out = mutableListOf<VideoEntity>()
+        for (uri in uris) {
+            val doc = DocumentFile.fromSingleUri(context, uri) ?: continue
+            val name = doc.name ?: "Video ${System.currentTimeMillis()}"
+            val duration = probeDurationMs(context, uri)
+            val size = doc.length().takeIf { it >= 0 } ?: 0L
+            out.add(
+                VideoEntity(
+                    uriString = uri.toString(),
+                    title = name,
+                    folderGroup = "Imported Files",
+                    durationMs = duration,
+                    sizeBytes = size,
+                )
+            )
+        }
+        out
+    }
+
     private val VIDEO_EXTENSIONS = setOf(
         "mp4", "mkv", "webm", "avi", "mov", "m4v", "3gp", "3g2", "wmv", "flv", "ts", "mts", "m2ts", "ogv", "mpeg", "mpg"
     )
