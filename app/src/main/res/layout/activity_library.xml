@@ -21,7 +21,7 @@
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:padding="8dp"
-        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintBottom_toTopOf="@id/miniPlayerContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
@@ -33,10 +33,136 @@
         android:text="No videos yet. Pick a folder from Home."
         android:textColor="@color/crow_on_muted"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintBottom_toTopOf="@id/miniPlayerContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
+
+    <!-- Mini Player Container -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/miniPlayerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="@color/crow_surface_elevated"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/miniPlayerView"
+                android:layout_width="120dp"
+                android:layout_height="match_parent"
+                android:background="@color/crow_pure_black"
+                app:layout_constraintStart_toStartOf="parent"
+                app:surface_type="texture_view"
+                app:use_controller="false" />
+
+            <TextView
+                android:id="@+id/miniTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="8dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/orbitron_bold"
+                android:maxLines="1"
+                android:text="Video"
+                android:textColor="@color/crow_on_bg"
+                android:textSize="13sp"
+                app:layout_constraintEnd_toStartOf="@id/miniControlsRow"
+                app:layout_constraintStart_toEndOf="@id/miniPlayerView"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/miniSubtitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/orbitron_regular"
+                android:text="Playing"
+                android:textColor="@color/crow_on_muted"
+                android:textSize="11sp"
+                app:layout_constraintEnd_toEndOf="@id/miniTitle"
+                app:layout_constraintStart_toStartOf="@id/miniTitle"
+                app:layout_constraintTop_toBottomOf="@id/miniTitle" />
+
+            <LinearLayout
+                android:id="@+id/miniControlsRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <ImageButton
+                    android:id="@+id/btnMiniRewind"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Rewind"
+                    android:src="@android:drawable/ic_media_rew"
+                    app:tint="@color/crow_on_muted" />
+
+                <ImageButton
+                    android:id="@+id/btnMiniPlayPause"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_button_outline_red"
+                    android:contentDescription="Play/Pause"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    android:src="@android:drawable/ic_media_pause"
+                    app:tint="@color/crow_accent_red" />
+
+                <ImageButton
+                    android:id="@+id/btnMiniForward"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Forward"
+                    android:src="@android:drawable/ic_media_ff"
+                    app:tint="@color/crow_on_muted" />
+
+                <ImageButton
+                    android:id="@+id/btnMiniClose"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Close"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    app:tint="@color/crow_on_muted" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/miniProgress"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="0dp"
+                android:layout_height="3dp"
+                android:max="1000"
+                android:progressBackgroundTint="@color/crow_seekbar_bg"
+                android:progressTint="@color/crow_accent_red"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"

@@ -136,14 +136,15 @@ class PlayerActivity : AppCompatActivity() {
         
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (player?.isPlaying == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) enterPiP()
-                else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+                // Instead of always entering PiP, just finish so we go back to Library
+                // The Library will then show the mini player if the video is still playing
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
             }
         })
 
         binding.toolbar.setNavigationOnClickListener {
-            if (player?.isPlaying == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) enterPiP()
-            else onBackPressedDispatcher.onBackPressed()
+            onBackPressedDispatcher.onBackPressed()
         }
 
         val startId = intent.getLongExtra(EXTRA_VIDEO_ID, -1L)
@@ -172,6 +173,11 @@ class PlayerActivity : AppCompatActivity() {
         handler.post(tickRunnable)
     }
 
+    override fun onStart() {
+        super.onStart()
+        initPlayerIfNeeded()
+    }
+
     override fun onResume() {
         super.onResume()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -182,12 +188,21 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onPause() { super.onPause(); persistProgress() }
-    override fun onStop() { persistProgress(); window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); super.onStop() }
+    override fun onStop() {
+        persistProgress()
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        player?.removeListener(playerListener)
+        binding.playerView.player = null
+        player = null
+        super.onStop()
+    }
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         player?.removeListener(playerListener)
-        if (!isInPictureInPictureMode) player?.pause()
+        // Only pause if we're not in PiP AND NOT going back to library (well, we can't easily know if we're going back to library here)
+        // But if the user wants a mini player in the library, we should NOT pause here.
+        // The service manages the player, so it will keep playing.
         if (serviceBound) { unbindService(serviceConn); serviceBound = false }
         super.onDestroy()
     }
@@ -226,6 +241,29 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { super.onConfigurationChanged(newConfig); if (isFullscreen) enforceFullscreenLayout() }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val newId = intent.getLongExtra(EXTRA_VIDEO_ID, -1L)
+        if (newId != -1L) {
+            val fresh = repo.getById(newId)
+            if (fresh != null) {
+                val wasSame = (newId == working.id)
+                working = fresh
+                currentSpeed = working.playbackSpeed.coerceIn(0.5f, 2.0f)
+                currentVolume = working.volumeLevel.coerceIn(0f, 1f)
+                chapters = repo.listChapters(working.id)
+                if (wasSame) {
+                    val startMs = working.trimStartMs.coerceAtLeast(0L)
+                    player?.seekTo(startMs)
+                    working = working.copy(positionMs = startMs)
+                }
+                bindUiFromWorking()
+                attachCurrentMedia(play = true)
+            }
+        }
+    }
+
     private fun startAndBindService() {
         val intent = Intent(this, PlaybackService::class.java).apply { action = "com.crowtheatron.BIND_LOCAL" }
         startService(intent); bindService(intent, serviceConn, BIND_AUTO_CREATE)
@@ -235,12 +273,28 @@ class PlayerActivity : AppCompatActivity() {
         if (player == null && serviceBound) {
             val sharedPlayer = playbackService?.getPlayer()
             if (sharedPlayer != null) {
-                player = sharedPlayer; sharedPlayer.addListener(playerListener); binding.playerView.player = sharedPlayer; attachCurrentMedia(play = true)
+                player = sharedPlayer
+                sharedPlayer.removeListener(playerListener)
+                sharedPlayer.addListener(playerListener)
+                binding.playerView.player = sharedPlayer
+                
+                val currentMedia = sharedPlayer.currentMediaItem
+                val workingUri = working.contentUri.toString()
+                if (currentMedia == null || currentMedia.localConfiguration?.uri?.toString() != workingUri) {
+                    attachCurrentMedia(play = true)
+                } else {
+                    isBindingUi = true
+                    try { bindUiFromWorking(); updatePlayPauseIcon(); tickTimeline() } finally { isBindingUi = false }
+                }
             }
         }
     }
 
-    private fun mediaItemFor(e: VideoEntity): MediaItem = MediaItem.Builder().setUri(e.contentUri).setMediaId(e.id.toString()).build()
+    private fun mediaItemFor(e: VideoEntity): MediaItem = MediaItem.Builder()
+        .setUri(e.contentUri)
+        .setMediaId(e.id.toString())
+        .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder().setTitle(e.title).build())
+        .build()
 
     private fun attachCurrentMedia(play: Boolean) {
         val exo = player ?: return
@@ -250,8 +304,8 @@ class PlayerActivity : AppCompatActivity() {
         if (currentUri != newUri) {
             exo.stop(); exo.clearMediaItems(); exo.setMediaItem(item); exo.prepare()
             val startMs = working.trimStartMs.coerceAtLeast(0L)
-            val resumePos = if (working.positionMs > startMs) working.positionMs else startMs
-            if (resumePos > 0L) exo.seekTo(resumePos)
+            exo.seekTo(startMs)
+            working = working.copy(positionMs = startMs)
         }
         applyPitchAndSpeed(working.pitchSemitones, currentSpeed); exo.volume = currentVolume * working.audioBoost.coerceIn(1f, 2f); exo.repeatMode = Player.REPEAT_MODE_OFF; exo.playWhenReady = play
         binding.playerView.postDelayed({ applyEnhancementMatrix() }, 150L)
@@ -313,15 +367,31 @@ class PlayerActivity : AppCompatActivity() {
     private fun metaDurationMs(): Long { val contentDur = player?.contentDuration ?: C.TIME_UNSET; if (contentDur != C.TIME_UNSET && contentDur > 0L) return contentDur; return working.durationMs.takeIf { it > 0L } ?: 1L }
 
     private fun tickTimeline() {
-        val exo = player ?: return; val dur = exo.duration; if (dur <= 0L) return; val pos = exo.currentPosition
+        val exo = player ?: return; val fullDur = exo.duration; if (fullDur <= 0L) return; val pos = exo.currentPosition
+        
+        val start = working.trimStartMs
+        val end = if (working.trimEndMs > 0) working.trimEndMs else fullDur
+        
         if (working.trimEndMs > 0L && pos >= working.trimEndMs) { handleTrimEndReached(); return }
-        val progress = ((pos * 1000L) / dur).toInt().coerceIn(0, 1000)
+        
+        // Progress relative to trim
+        val trimmedDur = max(end - start, 1L)
+        val progress = (((pos - start).coerceAtLeast(0L) * 1000L) / trimmedDur).toInt().coerceIn(0, 1000)
+        
         if (!userScrubbingPlayback) binding.seekPlayback.progress = progress
-        updateTimeLabel(pos, dur); updatePlayPauseIcon()
+        updateTimeLabel(pos, fullDur); updatePlayPauseIcon()
     }
 
     private fun handleTrimEndReached() { val exo = player ?: return; if (binding.switchLoop.isChecked) { exo.seekTo(working.trimStartMs.coerceAtLeast(0L)); exo.play() } else { exo.pause(); if (binding.switchAutoNext.isChecked) playAdjacent(1) } }
-    private fun updateTimeLabel(absPos: Long, dur: Long) { val label = "${FormatUtils.formatDuration(absPos)} / ${FormatUtils.formatDuration(dur)}"; binding.timeLabel.text = label; binding.tvPlaybackTime.text = label }
+    private fun updateTimeLabel(absPos: Long, dur: Long) {
+        val start = working.trimStartMs
+        val end = if (working.trimEndMs > 0) working.trimEndMs else dur
+        val trimmedDur = max(end - start, 0L)
+        val relativePos = max(absPos - start, 0L)
+        
+        binding.tvPlaybackTime.text = FormatUtils.formatDuration(relativePos)
+        binding.timeLabel.text = FormatUtils.formatDuration(trimmedDur)
+    }
     private fun updatePlayPauseIcon() { binding.btnPlayPause.setImageResource(if (player?.isPlaying == true) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play) }
     private fun updateServiceNotification() { val state = if (player?.isPlaying == true) "Playing" else "Paused"; playbackService?.updateNotification(working.title, state) }
 
@@ -358,7 +428,19 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun setupControls() {
-        binding.btnPlayPause.setOnClickListener { val exo = player ?: return@setOnClickListener; if (exo.isPlaying) exo.pause() else exo.play() }
+        binding.btnPlayPause.setOnClickListener {
+            val exo = player ?: return@setOnClickListener
+            if (exo.isPlaying) {
+                exo.pause()
+            } else {
+                if (exo.playbackState == Player.STATE_ENDED) {
+                    exo.seekTo(working.trimStartMs.coerceAtLeast(0L))
+                } else if (exo.playbackState == Player.STATE_IDLE) {
+                    exo.prepare()
+                }
+                exo.play()
+            }
+        }
         binding.btnStop.setOnClickListener { player?.pause(); player?.seekTo(working.trimStartMs); persistProgress(); tickTimeline() }
         binding.btnRewind.setOnClickListener { jumpBy(-10) }; binding.btnForward.setOnClickListener { jumpBy(10) }
         binding.btnPrev.setOnClickListener { playAdjacent(-1) }; binding.btnNext.setOnClickListener { playAdjacent(1) }
@@ -366,7 +448,18 @@ class PlayerActivity : AppCompatActivity() {
         binding.btnPlaylist.setOnClickListener { showPlaylistSelectionDialog() }
         binding.btnAddChapter.setOnClickListener { showAddChapterDialog(player?.currentPosition ?: 0L) }
         binding.seekPlayback.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) { if (fromUser) { val dur = player?.duration ?: 0L; if (dur > 0) player?.seekTo(dur * p / 1000L) } }
+            override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    val exo = player ?: return
+                    val fullDur = exo.duration
+                    if (fullDur <= 0L) return
+                    val start = working.trimStartMs
+                    val end = if (working.trimEndMs > 0) working.trimEndMs else fullDur
+                    val trimmedDur = max(end - start, 1L)
+                    val seekPos = start + (p * trimmedDur / 1000L)
+                    exo.seekTo(seekPos)
+                }
+            }
             override fun onStartTrackingTouch(sb: SeekBar?) { userScrubbingPlayback = true }
             override fun onStopTrackingTouch(sb: SeekBar?) { userScrubbingPlayback = false; persistProgress() }
         })
@@ -383,12 +476,76 @@ class PlayerActivity : AppCompatActivity() {
         binding.btnSpeedUp.setOnClickListener { val np = (binding.seekSpeed.progress + 1).coerceAtMost(30); binding.seekSpeed.progress = np; applySpeedStep(np); persistPrefs() }
         binding.btnSpeedReset.setOnClickListener { val np = speedToProgress(1.0f); binding.seekSpeed.progress = np; applySpeedStep(np); persistPrefs() }
         binding.seekSpeed.setOnSeekBarChangeListener(seekBarListener(onChange = { p, f -> if (f) applySpeedStep(p) }, onStop = { persistPrefs() }))
-        binding.btnTrimReset.setOnClickListener { working = working.copy(trimStartMs = 0L, trimEndMs = 0L); isBindingUi = true; bindTrimSeekers(); isBindingUi = false; persistPrefs(); tickTimeline() }
+        
+        setupTrimControls()
+        
         binding.switchLoop.setOnCheckedChangeListener { _, c -> if (!isBindingUi) { working = working.copy(loopPlayback = c); player?.repeatMode = if (c) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF; persistPrefs() } }
         binding.switchAutoNext.setOnCheckedChangeListener { _, c -> if (!isBindingUi) { working = working.copy(autoPlayNext = c); persistPrefs() } }
         binding.btnFavorite.setOnClickListener { val next = !working.favorite; working = working.copy(favorite = next); repo.setFavorite(working.id, next); binding.btnFavorite.text = getString(if (next) R.string.favorite_off else R.string.favorite_on) }
         binding.btnResetAll.setOnClickListener { resetAllState() }
         binding.btnSavePrefs.setOnClickListener { readTrimFromSeekBars(); repo.savePreferences(working); Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show() }
+    }
+
+    private fun setupTrimControls() {
+        binding.seekTrimStart.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    val full = max(metaDurationMs(), 1L)
+                    val startMs = (progress * full) / 1000L
+                    working = working.copy(trimStartMs = startMs)
+                    binding.tvTrimStart.text = "Start: ${FormatUtils.formatDuration(startMs)}"
+                    player?.let { if (it.currentPosition < startMs) it.seekTo(startMs) }
+                }
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) { persistPrefs(); tickTimeline() }
+        })
+
+        binding.seekTrimEnd.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    val full = max(metaDurationMs(), 1L)
+                    val endMs = (progress * full) / 1000L
+                    working = working.copy(trimEndMs = if (endMs >= full - 250L) 0L else endMs)
+                    binding.tvTrimEnd.text = "End: ${FormatUtils.formatDuration(if (working.trimEndMs <= 0L) full else working.trimEndMs)}"
+                    player?.let { if (working.trimEndMs > 0 && it.currentPosition > working.trimEndMs) it.seekTo(working.trimEndMs - 100) }
+                }
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) { persistPrefs(); tickTimeline() }
+        })
+
+        binding.btnTrimStartMinus.setOnClickListener { adjustTrimStart(-10000) }
+        binding.btnTrimStartPlus.setOnClickListener { adjustTrimStart(10000) }
+        binding.btnTrimEndMinus.setOnClickListener { adjustTrimEnd(-10000) }
+        binding.btnTrimEndPlus.setOnClickListener { adjustTrimEnd(10000) }
+        binding.btnTrimReset.setOnClickListener { 
+            working = working.copy(trimStartMs = 0L, trimEndMs = 0L)
+            isBindingUi = true; bindTrimSeekers(); isBindingUi = false
+            persistPrefs(); tickTimeline() 
+        }
+    }
+
+    private fun adjustTrimStart(deltaMs: Long) {
+        val full = max(metaDurationMs(), 1L)
+        val newStart = (working.trimStartMs + deltaMs).coerceIn(0L, if (working.trimEndMs > 0) working.trimEndMs - 500L else full - 500L)
+        working = working.copy(trimStartMs = newStart)
+        isBindingUi = true; bindTrimSeekers(); isBindingUi = false
+        persistPrefs()
+        player?.let { if (it.currentPosition < newStart) it.seekTo(newStart) }
+        tickTimeline()
+    }
+
+    private fun adjustTrimEnd(deltaMs: Long) {
+        val full = max(metaDurationMs(), 1L)
+        val currentEnd = if (working.trimEndMs <= 0L) full else working.trimEndMs
+        var newEnd = (currentEnd + deltaMs).coerceIn(working.trimStartMs + 500L, full)
+        if (newEnd >= full - 250L) newEnd = 0L
+        working = working.copy(trimEndMs = newEnd)
+        isBindingUi = true; bindTrimSeekers(); isBindingUi = false
+        persistPrefs()
+        player?.let { if (working.trimEndMs > 0 && it.currentPosition > working.trimEndMs) it.seekTo(working.trimEndMs - 100) }
+        tickTimeline()
     }
 
     private fun toggleMute() {

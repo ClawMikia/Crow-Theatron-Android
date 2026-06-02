@@ -1,17 +1,25 @@
 package com.crowtheatron.app.library
 
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.recyclerview.widget.GridLayoutManager
 import com.crowtheatron.app.R
 import com.crowtheatron.app.data.VideoEntity
 import com.crowtheatron.app.data.VideoRepository
 import com.crowtheatron.app.databinding.ActivityLibraryBinding
 import com.crowtheatron.app.player.PlayerActivity
+import com.crowtheatron.app.service.PlaybackService
 import com.crowtheatron.app.ui.BottomNavHelper
 import com.crowtheatron.app.ui.LibraryAdapter
 import com.crowtheatron.app.ui.LibraryListItem
@@ -28,6 +36,52 @@ class LibraryActivity : AppCompatActivity() {
 
     private lateinit var adapter: LibraryAdapter
     private var playlistId: Long = -1L
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            tickMiniPlayer()
+            handler.postDelayed(this, 1000L)
+        }
+    }
+
+    private val playerListener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            binding.btnMiniPlayPause.setImageResource(
+                if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+            )
+            if (isPlaying) handler.post(tickRunnable) else handler.removeCallbacks(tickRunnable)
+        }
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            binding.miniTitle.text = mediaItem?.mediaMetadata?.title ?: "Playing Video"
+            tickMiniPlayer()
+        }
+        override fun onPlaybackStateChanged(state: Int) {
+            if (state == Player.STATE_IDLE || state == Player.STATE_ENDED) {
+                binding.miniPlayerContainer.visibility = View.GONE
+                handler.removeCallbacks(tickRunnable)
+            } else {
+                binding.miniPlayerContainer.visibility = View.VISIBLE
+                if (playbackService?.getPlayer()?.isPlaying == true) handler.post(tickRunnable)
+            }
+        }
+    }
+
+    private var playbackService: PlaybackService? = null
+    private var serviceBound = false
+    private val serviceConn = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+            val lb = binder as PlaybackService.LocalBinder
+            playbackService = lb.getService()
+            serviceBound = true
+            updateMiniPlayer()
+        }
+        override fun onServiceDisconnected(name: ComponentName) {
+            serviceBound = false
+            playbackService = null
+            binding.miniPlayerContainer.visibility = View.GONE
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,6 +161,99 @@ class LibraryActivity : AppCompatActivity() {
         }
 
         updateList()
+        startAndBindService()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        updateMiniPlayer()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        handler.removeCallbacks(tickRunnable)
+        playbackService?.getPlayer()?.removeListener(playerListener)
+        binding.miniPlayerView.player = null
+    }
+
+    override fun onDestroy() {
+        if (serviceBound) {
+            unbindService(serviceConn)
+            serviceBound = false
+        }
+        super.onDestroy()
+    }
+
+    private fun startAndBindService() {
+        val intent = Intent(this, PlaybackService::class.java).apply { action = "com.crowtheatron.BIND_LOCAL" }
+        bindService(intent, serviceConn, BIND_AUTO_CREATE)
+    }
+
+    private fun updateMiniPlayer() {
+        val player = playbackService?.getPlayer()
+        if (player != null && (player.isPlaying || player.playbackState != Player.STATE_IDLE)) {
+            binding.miniPlayerContainer.visibility = View.VISIBLE
+            
+            player.removeListener(playerListener)
+            player.addListener(playerListener)
+            binding.miniPlayerView.player = player
+            
+            val currentMediaItem = player.currentMediaItem
+            binding.miniTitle.text = currentMediaItem?.mediaMetadata?.title ?: "Playing Video"
+            
+            binding.btnMiniPlayPause.setImageResource(
+                if (player.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+            )
+            
+            binding.btnMiniPlayPause.setOnClickListener {
+                if (player.isPlaying) {
+                    player.pause()
+                } else {
+                    if (player.playbackState == Player.STATE_ENDED) {
+                        player.seekTo(0L)
+                    }
+                    player.play()
+                }
+            }
+
+            binding.btnMiniRewind.setOnClickListener {
+                player.seekTo((player.currentPosition - 10000).coerceAtLeast(0))
+                tickMiniPlayer()
+            }
+
+            binding.btnMiniForward.setOnClickListener {
+                player.seekTo((player.currentPosition + 10000).coerceAtMost(player.duration))
+                tickMiniPlayer()
+            }
+            
+            binding.btnMiniClose.setOnClickListener {
+                player.stop()
+                binding.miniPlayerContainer.visibility = View.GONE
+                handler.removeCallbacks(tickRunnable)
+            }
+            
+            binding.miniPlayerContainer.setOnClickListener {
+                val intent = Intent(this, PlayerActivity::class.java).apply {
+                    putExtra(PlayerActivity.EXTRA_VIDEO_ID, currentMediaItem?.mediaId?.toLongOrNull() ?: -1L)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                startActivity(intent)
+            }
+
+            if (player.isPlaying) handler.post(tickRunnable)
+            tickMiniPlayer()
+        } else {
+            binding.miniPlayerContainer.visibility = View.GONE
+            handler.removeCallbacks(tickRunnable)
+        }
+    }
+
+    private fun tickMiniPlayer() {
+        val player = playbackService?.getPlayer() ?: return
+        if (player.duration > 0) {
+            val progress = (player.currentPosition * 1000 / player.duration).toInt()
+            binding.miniProgress.progress = progress
+        }
     }
 
     private fun refreshData() {
