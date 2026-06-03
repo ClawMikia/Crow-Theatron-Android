@@ -3,9 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/crow_surface"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="20dp">
 
     <!-- Title -->
     <TextView
@@ -33,16 +32,10 @@
     <!-- Chapter name input -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilChapterName"
+        style="@style/Widget.CrowTheatron.TextInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="0dp"
-        android:layout_marginEnd="0dp"
-        android:layout_marginBottom="8dp"
-        app:boxBackgroundColor="@color/crow_surface_elevated"
-        app:boxStrokeColor="@color/crow_accent_yellow"
-        app:boxStrokeWidth="1dp"
-        app:cursorColor="@color/crow_accent_yellow"
-        app:hintTextColor="@color/crow_on_muted">
+        android:layout_marginBottom="8dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etChapterName"

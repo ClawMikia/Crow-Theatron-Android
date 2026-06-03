@@ -2,7 +2,7 @@ package com.crowtheatron.app.main
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import com.crowtheatron.app.R
 import com.crowtheatron.app.data.CrowDbHelper
@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnResetLibrary.setOnClickListener {
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle("Reset library?")
                 .setMessage("This will delete all videos from the library, including playback history, chapters and preferences. This cannot be undone.")
                 .setPositiveButton("Reset") { _, _ ->

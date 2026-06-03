@@ -66,6 +66,155 @@
                 android:textSize="22sp"
                 android:textStyle="bold" />
         </FrameLayout>
+
+        <!-- Fullscreen controls overlay -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/fullscreenOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#88000000"
+            android:visibility="gone">
+
+            <!-- Panels that can be hidden -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/fsControlPanels"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <!-- Top bar -->
+                <LinearLayout
+                    android:id="@+id/fsTopBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <ImageButton
+                        android:id="@+id/btnFsExit"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        android:tint="@android:color/white" />
+
+                    <TextView
+                        android:id="@+id/tvFsTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="16dp"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:ellipsize="end"
+                        android:singleLine="true" />
+
+                    <ImageButton
+                        android:id="@+id/btnFsRotate"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_revert"
+                        android:tint="@android:color/white" />
+                </LinearLayout>
+
+                <!-- Center controls -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+
+                    <ImageButton
+                        android:id="@+id/btnFsPrev"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_media_previous"
+                        android:tint="@android:color/white" />
+
+                    <ImageButton
+                        android:id="@+id/btnFsPlayPause"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_media_play"
+                        android:tint="@android:color/white" />
+
+                    <ImageButton
+                        android:id="@+id/btnFsNext"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_media_next"
+                        android:tint="@android:color/white" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Bottom seekbar area - stays visible when panels hidden -->
+            <LinearLayout
+                android:id="@+id/fsSeekbarArea"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="16dp"
+                android:background="#44000000"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <SeekBar
+                    android:id="@+id/seekFs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="1000"
+                    android:progressBackgroundTint="@color/crow_seekbar_bg"
+                    android:progressTint="@color/crow_accent_red"
+                    android:thumbTint="@color/crow_accent_red" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp">
+                    <TextView
+                        android:id="@+id/tvFsTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@android:color/white"
+                        android:fontFamily="@font/orbitron_regular"
+                        android:textSize="12sp"
+                        android:text="00:00" />
+                    <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                    <TextView
+                        android:id="@+id/tvFsDuration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@android:color/white"
+                        android:fontFamily="@font/orbitron_regular"
+                        android:textSize="12sp"
+                        android:text="00:00" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Toggle button - always visible -->
+            <ImageButton
+                android:id="@+id/btnToggleFsPanels"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_margin="16dp"
+                android:background="@drawable/bg_button_outline_neutral"
+                android:src="@android:drawable/ic_menu_view"
+                android:tint="@android:color/white"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/fsSeekbarArea" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </FrameLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -153,6 +302,17 @@
                             android:tint="@color/crow_accent_purple" />
 
                         <ImageButton
+                            android:id="@+id/btnFullscreen"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="6dp"
+                            android:background="@drawable/bg_button_outline_neutral"
+                            android:contentDescription="Fullscreen"
+                            android:padding="7dp"
+                            android:src="@android:drawable/ic_menu_zoom"
+                            android:tint="@color/crow_accent_yellow" />
+
+                        <ImageButton
                             android:id="@+id/btnPlaylist"
                             android:layout_width="36dp"
                             android:layout_height="36dp"
@@ -175,74 +335,96 @@
                     </LinearLayout>
 
                     <!-- Transport controls row -->
-                    <LinearLayout
+                    <HorizontalScrollView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="horizontal">
+                        android:layout_marginTop="15dp"
+                        android:scrollbars="none"
+                        android:fillViewport="true">
 
-                        <ImageButton
-                            android:id="@+id/btnPrev"
-                            android:layout_width="52dp"
-                            android:layout_height="52dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="Previous"
-                            android:src="@android:drawable/ic_media_previous"
-                            android:tint="@color/crow_on_muted" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:orientation="horizontal"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp">
 
-                        <ImageButton
-                            android:id="@+id/btnRewind"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="Rewind"
-                            android:src="@android:drawable/ic_media_rew"
-                            android:tint="@color/crow_on_muted" />
+                            <ImageButton
+                                android:id="@+id/btnPrev"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_weight="1"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="Previous"
+                                android:padding="14dp"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/ic_prev_custom" />
 
-                        <ImageButton
-                            android:id="@+id/btnPlayPause"
-                            android:layout_width="34dp"
-                            android:layout_height="34dp"
-                            android:background="@drawable/bg_button_outline_red"
-                            android:contentDescription="@string/play"
-                            android:src="@android:drawable/ic_media_play"
-                            android:tint="@color/crow_accent_red" />
+                            <ImageButton
+                                android:id="@+id/btnRewind"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_weight="1"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="Rewind"
+                                android:padding="14dp"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/ic_rew_custom" />
 
-                        <ImageButton
-                            android:id="@+id/btnForward"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="Forward"
-                            android:src="@android:drawable/ic_media_ff"
-                            android:tint="@color/crow_on_muted" />
+                            <ImageButton
+                                android:id="@+id/btnPlayPause"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_weight="1.2"
+                                android:background="@drawable/bg_button_outline_red"
+                                android:contentDescription="@string/play"
+                                android:padding="16dp"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/ic_play_custom" />
 
-                        <ImageButton
-                            android:id="@+id/btnNext"
-                            android:layout_width="52dp"
-                            android:layout_height="52dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="Next"
-                            android:src="@android:drawable/ic_media_next"
-                            android:tint="@color/crow_on_muted" />
+                            <ImageButton
+                                android:id="@+id/btnForward"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_weight="1"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="Forward"
+                                android:padding="14dp"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/ic_ff_custom" />
 
-                        <ImageButton
-                            android:id="@+id/btnStop"
-                            android:layout_width="34dp"
-                            android:layout_height="34dp"
-                            android:background="@drawable/bg_button_outline_neutral"
-                            android:contentDescription="@string/stop"
-                            android:padding="8dp"
-                            android:src="@android:drawable/ic_delete"
-                            android:tint="@color/crow_on_muted" />
-                    </LinearLayout>
+                            <ImageButton
+                                android:id="@+id/btnNext"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_weight="1"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="Next"
+                                android:padding="14dp"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/ic_next_custom" />
+
+                            <ImageButton
+                                android:id="@+id/btnStop"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_button_outline_neutral"
+                                android:contentDescription="@string/stop"
+                                android:padding="18dp"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/ic_close_custom" />
+                        </LinearLayout>
+                    </HorizontalScrollView>
 
                     <!-- Seekbar -->
                     <SeekBar
                         android:id="@+id/seekPlayback"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="13dp"
+                        android:layout_marginBottom="10dp"
                         android:max="1000"
                         android:progressBackgroundTint="@color/crow_seekbar_bg"
                         android:progressTint="@color/crow_accent_red"

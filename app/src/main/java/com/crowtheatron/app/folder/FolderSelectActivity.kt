@@ -4,7 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
+import com.crowtheatron.app.ui.showCrowMessage
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -32,8 +32,7 @@ class FolderSelectActivity : AppCompatActivity() {
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
         } catch (_: SecurityException) {
-            Toast.makeText(this, "Could not keep folder access.", Toast.LENGTH_LONG).show()
-            finish()
+            showCrowMessage("Access Denied", "Could not keep folder access.") { finish() }
             return@registerForActivityResult
         }
         scanAndImport(uri)
@@ -77,18 +76,13 @@ class FolderSelectActivity : AppCompatActivity() {
                 binding.btnChoose.isEnabled = true
                 binding.btnChooseFiles.isEnabled = true
                 binding.status.text = "No video files found in that folder."
-                Toast.makeText(this@FolderSelectActivity, binding.status.text, Toast.LENGTH_SHORT).show()
+                showCrowMessage("No Videos Found", binding.status.text)
                 return@launch
             }
             withContext(Dispatchers.IO) {
                 repo.importScanResults(videos, withThumbnails = true)
             }
-            Toast.makeText(
-                this@FolderSelectActivity,
-                "Imported ${videos.size} videos",
-                Toast.LENGTH_SHORT
-            ).show()
-            finish()
+            showCrowMessage("Import Complete", "Imported ${videos.size} videos") { finish() }
         }
     }
 
@@ -104,12 +98,7 @@ class FolderSelectActivity : AppCompatActivity() {
             withContext(Dispatchers.IO) {
                 repo.importScanResults(videos, withThumbnails = true)
             }
-            Toast.makeText(
-                this@FolderSelectActivity,
-                "Imported ${videos.size} videos",
-                Toast.LENGTH_SHORT
-            ).show()
-            finish()
+            showCrowMessage("Import Complete", "Imported ${videos.size} videos") { finish() }
         }
     }
 }

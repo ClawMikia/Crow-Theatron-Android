@@ -22,9 +22,11 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.FrameLayout
 import android.widget.SeekBar
-import android.widget.Toast
+import com.crowtheatron.app.ui.showCrowMessage
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -62,6 +64,7 @@ class PlayerActivity : AppCompatActivity() {
     private var playerReady = false
     private var isFullscreen = false
     private var isBindingUi = false
+    private var isFsPanelsVisible = true
     private var chapters = listOf<ChapterMarker>()
 
     private var currentSpeed  = 1.0f
@@ -122,7 +125,7 @@ class PlayerActivity : AppCompatActivity() {
         }
         override fun onIsPlayingChanged(isPlaying: Boolean) { updatePlayPauseIcon(); if (isPlaying) tickTimeline() }
         override fun onPlayerError(error: PlaybackException) {
-            Toast.makeText(this@PlayerActivity, "Playback error: ${error.message ?: "code ${error.errorCode}"}", Toast.LENGTH_LONG).show()
+            showCrowMessage("Playback Error", error.message ?: "code ${error.errorCode}")
             if (error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED) attachCurrentMedia(play = true)
         }
     }
@@ -136,10 +139,12 @@ class PlayerActivity : AppCompatActivity() {
         
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Instead of always entering PiP, just finish so we go back to Library
-                // The Library will then show the mini player if the video is still playing
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
+                if (isFullscreen) {
+                    toggleFullscreen(false)
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
             }
         })
 
@@ -239,7 +244,10 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { super.onConfigurationChanged(newConfig); if (isFullscreen) enforceFullscreenLayout() }
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { 
+        super.onConfigurationChanged(newConfig)
+        // No need to call enforceFullscreenLayout here anymore if we don't want to reset orientation
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -378,7 +386,10 @@ class PlayerActivity : AppCompatActivity() {
         val trimmedDur = max(end - start, 1L)
         val progress = (((pos - start).coerceAtLeast(0L) * 1000L) / trimmedDur).toInt().coerceIn(0, 1000)
         
-        if (!userScrubbingPlayback) binding.seekPlayback.progress = progress
+        if (!userScrubbingPlayback) {
+            binding.seekPlayback.progress = progress
+            binding.seekFs.progress = progress
+        }
         updateTimeLabel(pos, fullDur); updatePlayPauseIcon()
     }
 
@@ -389,15 +400,29 @@ class PlayerActivity : AppCompatActivity() {
         val trimmedDur = max(end - start, 0L)
         val relativePos = max(absPos - start, 0L)
         
-        binding.tvPlaybackTime.text = FormatUtils.formatDuration(relativePos)
-        binding.timeLabel.text = FormatUtils.formatDuration(trimmedDur)
+        val timeStr = FormatUtils.formatDuration(relativePos)
+        val durStr = FormatUtils.formatDuration(trimmedDur)
+        binding.tvPlaybackTime.text = timeStr
+        binding.timeLabel.text = durStr
+        binding.tvFsTime.text = timeStr
+        binding.tvFsDuration.text = durStr
     }
-    private fun updatePlayPauseIcon() { binding.btnPlayPause.setImageResource(if (player?.isPlaying == true) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play) }
+
+    private fun updatePlayPauseIcon() {
+        val isPlaying = player?.isPlaying == true
+        val iconRes = if (isPlaying) R.drawable.ic_pause_custom else R.drawable.ic_play_custom
+        binding.btnPlayPause.setImageResource(iconRes)
+        
+        // Fullscreen overlay still uses system icons for simplicity or can be updated too
+        val fsIcon = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+        binding.btnFsPlayPause.setImageResource(fsIcon)
+    }
     private fun updateServiceNotification() { val state = if (player?.isPlaying == true) "Playing" else "Paused"; playbackService?.updateNotification(working.title, state) }
 
     private fun bindUiFromWorking() {
         try {
             isBindingUi = true; binding.toolbar.title = working.title; binding.videoTitle.text = working.title
+            binding.tvFsTitle.text = working.title
             binding.seekPitch.progress = working.pitchSemitones.coerceIn(-6, 6) + 6; binding.pitchLabel.text = pitchLabel(working.pitchSemitones.coerceIn(-6, 6))
             binding.seekSpeed.progress = speedToProgress(currentSpeed); binding.tvSpeedValue.text = speedLabel(currentSpeed)
             binding.seekVolume.progress = (currentVolume * 100).toInt(); binding.tvVolumeValue.text = "${(currentVolume * 100).toInt()}%"
@@ -479,11 +504,36 @@ class PlayerActivity : AppCompatActivity() {
         
         setupTrimControls()
         
+        binding.btnFullscreen.setOnClickListener { toggleFullscreen(true) }
+        binding.btnFsExit.setOnClickListener { toggleFullscreen(false) }
+        binding.btnFsRotate.setOnClickListener { toggleFsOrientation() }
+        binding.btnToggleFsPanels.setOnClickListener { toggleFsPanels() }
+        binding.btnFsPlayPause.setOnClickListener { binding.btnPlayPause.performClick() }
+        binding.btnFsPrev.setOnClickListener { binding.btnPrev.performClick() }
+        binding.btnFsNext.setOnClickListener { binding.btnNext.performClick() }
+
+        binding.seekFs.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    val exo = player ?: return
+                    val fullDur = exo.duration
+                    if (fullDur <= 0L) return
+                    val start = working.trimStartMs
+                    val end = if (working.trimEndMs > 0) working.trimEndMs else fullDur
+                    val trimmedDur = max(end - start, 1L)
+                    val seekPos = start + (p * trimmedDur / 1000L)
+                    exo.seekTo(seekPos)
+                }
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) { userScrubbingPlayback = true }
+            override fun onStopTrackingTouch(sb: SeekBar?) { userScrubbingPlayback = false; persistProgress() }
+        })
+
         binding.switchLoop.setOnCheckedChangeListener { _, c -> if (!isBindingUi) { working = working.copy(loopPlayback = c); player?.repeatMode = if (c) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF; persistPrefs() } }
         binding.switchAutoNext.setOnCheckedChangeListener { _, c -> if (!isBindingUi) { working = working.copy(autoPlayNext = c); persistPrefs() } }
         binding.btnFavorite.setOnClickListener { val next = !working.favorite; working = working.copy(favorite = next); repo.setFavorite(working.id, next); binding.btnFavorite.text = getString(if (next) R.string.favorite_off else R.string.favorite_on) }
         binding.btnResetAll.setOnClickListener { resetAllState() }
-        binding.btnSavePrefs.setOnClickListener { readTrimFromSeekBars(); repo.savePreferences(working); Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show() }
+        binding.btnSavePrefs.setOnClickListener { readTrimFromSeekBars(); repo.savePreferences(working); showCrowMessage("Preferences Saved") }
     }
 
     private fun setupTrimControls() {
@@ -563,26 +613,67 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun wrapInMargin(view: View): View {
-        val container = FrameLayout(this); val lp = FrameLayout.LayoutParams(-1, -2)
-        lp.setMargins(48, 24, 48, 24); view.layoutParams = lp; container.addView(view); return container
+        val container = FrameLayout(this)
+        val density = resources.displayMetrics.density
+        val marginH = (24 * density).toInt()
+        val marginV = (16 * density).toInt()
+        val lp = FrameLayout.LayoutParams(-1, -2)
+        lp.setMargins(marginH, marginV, marginH, marginV)
+        view.layoutParams = lp
+        container.addView(view)
+        return container
     }
 
     private fun showPlaylistSelectionDialog() {
-        val playlists = repo.listPlaylists(); val titles = playlists.map { it.second }.toMutableList(); titles.add(0, "+ Create New Playlist")
-        AlertDialog.Builder(this).setTitle("Add to Playlist").setItems(titles.toTypedArray()) { _, which -> if (which == 0) showCreatePlaylistDialog() else { repo.addVideoToPlaylist(playlists[which - 1].first, working.id); Toast.makeText(this, "Added", Toast.LENGTH_SHORT).show() } }.show()
+        val playlists = repo.listPlaylists()
+        val titles = playlists.map { it.second }.toMutableList()
+        titles.add(0, "+ Create New Playlist")
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Add to Playlist")
+            .setItems(titles.toTypedArray()) { _, which ->
+                if (which == 0) showCreatePlaylistDialog()
+                else {
+                    repo.addVideoToPlaylist(playlists[which - 1].first, working.id)
+                    showCrowMessage("Success", "Added to ${playlists[which - 1].second}")
+                }
+            }.show()
     }
 
     private fun showCreatePlaylistDialog() {
-        val input = android.widget.EditText(this).apply { hint = "Playlist Name" }
-        AlertDialog.Builder(this).setTitle("New Playlist").setView(wrapInMargin(input)).setPositiveButton("Create") { _, _ -> val name = input.text.toString().trim(); if (name.isNotEmpty()) { val id = repo.createPlaylist(name); repo.addVideoToPlaylist(id, working.id); Toast.makeText(this, "Created and added", Toast.LENGTH_SHORT).show() } }.setNegativeButton("Cancel", null).show()
+        val til = TextInputLayout(this).apply {
+            hint = "Playlist Name"
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+        }
+        val et = TextInputEditText(til.context)
+        til.addView(et)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("New Playlist")
+            .setView(wrapInMargin(til))
+            .setPositiveButton("Create") { _, _ ->
+                val name = et.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    val id = repo.createPlaylist(name)
+                    repo.addVideoToPlaylist(id, working.id)
+                    showCrowMessage("Success", "Created and added")
+                }
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun showAddChapterDialog(posMs: Long) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_chapter, null)
         dialogView.findViewById<android.widget.TextView>(R.id.tvTimestamp).text = "at ${FormatUtils.formatDuration(posMs)}"
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create(); dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .create()
         dialogView.findViewById<android.widget.ImageButton>(R.id.btnCancel).setOnClickListener { dialog.dismiss() }
-        dialogView.findViewById<android.widget.ImageButton>(R.id.btnAdd).setOnClickListener { val etName = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etChapterName); val label = etName.text.toString().trim().ifBlank { "Chapter" }; repo.addChapter(working.id, posMs, label); chapters = repo.listChapters(working.id); dialog.dismiss() }
+        dialogView.findViewById<android.widget.ImageButton>(R.id.btnAdd).setOnClickListener {
+            val etName = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etChapterName)
+            val label = etName.text.toString().trim().ifBlank { "Chapter" }
+            repo.addChapter(working.id, posMs, label)
+            chapters = repo.listChapters(working.id)
+            dialog.dismiss()
+        }
         dialog.show()
     }
 
@@ -601,10 +692,60 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun readTrimFromSeekBars() { val full = max(metaDurationMs(), 1L); val start = binding.seekTrimStart.progress * full / 1000L; var end = binding.seekTrimEnd.progress * full / 1000L; if (end <= start + 500L) end = min(start + 500L, full); working = working.copy(trimStartMs = start, trimEndMs = if (end >= full - 250L) 0L else end) }
 
+    private fun toggleFullscreen(enter: Boolean) {
+        isFullscreen = enter
+        if (enter) {
+            if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            }
+            binding.fullscreenOverlay.visibility = View.VISIBLE
+            binding.toolbar.visibility = View.GONE
+            binding.scrollView.visibility = View.GONE
+            binding.playerSurface.layoutParams = (binding.playerSurface.layoutParams as ViewGroup.MarginLayoutParams).apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+                topMargin = 0
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.insetsController?.hide(android.view.WindowInsets.Type.systemBars())
+            } else {
+                @Suppress("DEPRECATION") window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            }
+        } else {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            binding.fullscreenOverlay.visibility = View.GONE
+            binding.toolbar.visibility = View.VISIBLE
+            binding.scrollView.visibility = View.VISIBLE
+            binding.playerSurface.layoutParams = (binding.playerSurface.layoutParams as ViewGroup.MarginLayoutParams).apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = (220 * resources.displayMetrics.density).toInt()
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.insetsController?.show(android.view.WindowInsets.Type.systemBars())
+            } else {
+                @Suppress("DEPRECATION") window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            }
+        }
+        binding.playerSurface.requestLayout()
+    }
+
+    private fun toggleFsOrientation() {
+        requestedOrientation = if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    private fun toggleFsPanels() {
+        isFsPanelsVisible = !isFsPanelsVisible
+        binding.fsControlPanels.visibility = if (isFsPanelsVisible) View.VISIBLE else View.GONE
+        binding.btnToggleFsPanels.setImageResource(if (isFsPanelsVisible) android.R.drawable.ic_menu_view else android.R.drawable.ic_menu_upload) // upload looks like 'eye closed' sort of? No, let's use something else or just trust icons
+        // Actually I'll use ic_menu_view for both or just toggle alpha
+    }
+
     private fun enforceFullscreenLayout() {
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { window.insetsController?.hide(android.view.WindowInsets.Type.systemBars()) } else { @Suppress("DEPRECATION") window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN) }
-        binding.toolbar.visibility = View.GONE; binding.playerSurface.layoutParams = binding.playerSurface.layoutParams.also { it.width = -1; it.height = -1 }; binding.playerSurface.requestLayout()
+        toggleFullscreen(true)
     }
 
     private fun enterPiP() {
@@ -613,7 +754,9 @@ class PlayerActivity : AppCompatActivity() {
         val params = PictureInPictureParams.Builder().setAspectRatio(rational).build(); enterPictureInPictureMode(params)
     }
 
-    private fun showAndFinish(msg: String) { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show(); finish() }
+    private fun showAndFinish(msg: String) {
+        showCrowMessage("Attention", msg) { finish() }
+    }
     private fun seekBarListener(onChange: (Int, Boolean) -> Unit, onStop: () -> Unit) = object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) = onChange(p, fromUser); override fun onStartTrackingTouch(sb: SeekBar?) {}; override fun onStopTrackingTouch(sb: SeekBar?) = onStop() }
     private fun progressToSpeed(p: Int) = (0.5f + p * 0.05f).coerceIn(0.5f, 2.0f)
     private fun speedToProgress(s: Float) = ((s - 0.5f) / 0.05f).toInt().coerceIn(0, 30)

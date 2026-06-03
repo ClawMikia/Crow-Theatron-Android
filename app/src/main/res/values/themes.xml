@@ -17,9 +17,63 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="materialButtonStyle">@style/Widget.CrowTheatron.Button</item>
         <item name="toolbarStyle">@style/Widget.CrowTheatron.Toolbar</item>
+
+        <!-- Aesthetic Dialogs -->
+        <item name="alertDialogTheme">@style/ThemeOverlay.CrowTheatron.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.CrowTheatron.MaterialAlertDialog</item>
+
+        <!-- Aesthetic Inputs -->
+        <item name="textInputStyle">@style/Widget.CrowTheatron.TextInputLayout</item>
+        <item name="editTextStyle">@style/Widget.CrowTheatron.TextInputEditText</item>
     </style>
 
     <style name="Theme.CrowTheatron" parent="Theme.CrowTheatron.V26" />
+
+    <!-- Dialog Styles -->
+    <style name="ThemeOverlay.CrowTheatron.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorPrimary">@color/crow_accent_yellow</item>
+        <item name="colorSurface">@color/crow_surface_elevated</item>
+        <item name="colorOnSurface">@color/crow_on_bg</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.CrowTheatron.Dialog</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.CrowTheatron.Dialog</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.CrowTheatron.Button.TextButton.Dialog</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.CrowTheatron.Button.TextButton.Dialog</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Widget.CrowTheatron.Button.TextButton.Dialog</item>
+    </style>
+
+    <style name="ShapeAppearance.CrowTheatron.Dialog" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">28dp</item>
+    </style>
+
+    <style name="Widget.CrowTheatron.Button.TextButton.Dialog" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/crow_accent_yellow</item>
+        <item name="android:fontFamily">@font/orbitron_bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.1</item>
+    </style>
+
+    <!-- Input Styles -->
+    <style name="Widget.CrowTheatron.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/crow_accent_yellow</item>
+        <item name="boxStrokeWidth">1.5dp</item>
+        <item name="boxStrokeWidthFocused">2.5dp</item>
+        <item name="hintTextColor">@color/crow_accent_yellow</item>
+        <item name="android:textColorHint">@color/crow_on_muted</item>
+        <item name="boxBackgroundColor">@color/crow_surface</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.CrowTheatron.SmallComponent</item>
+    </style>
+
+    <style name="Widget.CrowTheatron.TextInputEditText" parent="Widget.Material3.TextInputEditText.OutlinedBox">
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:textColor">@color/crow_on_bg</item>
+    </style>
+
+    <style name="ShapeAppearance.CrowTheatron.SmallComponent" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
 
     <style name="Widget.CrowTheatron.Toolbar" parent="Widget.Material3.Toolbar">
         <item name="titleTextColor">@color/crow_accent_yellow</item>

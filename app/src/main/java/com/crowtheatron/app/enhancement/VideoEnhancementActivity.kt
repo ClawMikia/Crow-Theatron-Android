@@ -1,7 +1,7 @@
 package com.crowtheatron.app.enhancement
 
 import android.os.Bundle
-import android.widget.Toast
+import com.crowtheatron.app.ui.showCrowMessage
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.crowtheatron.app.data.AppPrefs
@@ -25,7 +25,7 @@ class VideoEnhancementActivity : AppCompatActivity() {
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = EnhancementListAdapter { mode ->
             prefs.defaultEnhancement = mode
-            Toast.makeText(this, "Default enhancement: ${mode.displayName}", Toast.LENGTH_SHORT).show()
+            showCrowMessage("Enhancement Updated", "Default set to ${mode.displayName}")
         }
     }
 }

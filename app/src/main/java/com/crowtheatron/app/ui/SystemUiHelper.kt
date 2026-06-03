@@ -10,7 +10,20 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.crowtheatron.app.R
+
+/**
+ * Shows an aesthetic Crow-themed message dialog.
+ */
+fun AppCompatActivity.showCrowMessage(title: String, message: CharSequence? = null, onDismiss: (() -> Unit)? = null) {
+    MaterialAlertDialogBuilder(this)
+        .setTitle(title)
+        .setMessage(message)
+        .setPositiveButton("OK") { d, _ -> d.dismiss() }
+        .setOnDismissListener { onDismiss?.invoke() }
+        .show()
+}
 
 /**
  * Applies system bar insets while keeping the navigation bar opaque.

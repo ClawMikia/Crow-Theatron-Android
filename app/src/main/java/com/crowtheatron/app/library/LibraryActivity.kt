@@ -8,8 +8,8 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.view.View
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import com.crowtheatron.app.ui.showCrowMessage
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -273,14 +273,14 @@ class LibraryActivity : AppCompatActivity() {
         val availableVideos = allVideosInLibrary.filter { it.id !in currentPlaylistVideoIds }
         
         if (availableVideos.isEmpty()) {
-            Toast.makeText(this, "All videos are already in this playlist", Toast.LENGTH_SHORT).show()
+            showCrowMessage("Playlist", "All videos are already in this playlist")
             return
         }
 
         val titles = availableVideos.map { it.title }.toTypedArray()
         val selected = BooleanArray(titles.size)
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Add Videos to Playlist")
             .setMultiChoiceItems(titles, selected) { _, which, isChecked ->
                 selected[which] = isChecked

@@ -4,8 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -113,18 +114,29 @@ class PlaylistListActivity : AppCompatActivity() {
 
     private fun wrapInMargin(view: android.view.View): android.view.View {
         val container = android.widget.FrameLayout(this)
+        val density = resources.displayMetrics.density
+        val marginH = (24 * density).toInt()
+        val marginV = (16 * density).toInt()
         val lp = android.widget.FrameLayout.LayoutParams(-1, -2)
-        lp.setMargins(48, 24, 48, 24)
+        lp.setMargins(marginH, marginV, marginH, marginV)
         view.layoutParams = lp
         container.addView(view)
         return container
     }
 
     private fun showCreatePlaylistDialog() {
-        val input = EditText(this).apply { hint = "Playlist Name" }
-        AlertDialog.Builder(this).setTitle("New Playlist").setView(wrapInMargin(input))
+        val til = TextInputLayout(this).apply {
+            hint = "Playlist Name"
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+        }
+        val et = TextInputEditText(til.context)
+        til.addView(et)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("New Playlist")
+            .setView(wrapInMargin(til))
             .setPositiveButton("Create") { _, _ ->
-                val name = input.text.toString().trim()
+                val name = et.text.toString().trim()
                 if (name.isNotEmpty()) {
                     repo.createPlaylist(name)
                     loadData()
@@ -133,7 +145,7 @@ class PlaylistListActivity : AppCompatActivity() {
     }
 
     private fun showOptions(id: Long, title: String) {
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setItems(arrayOf("Rename", "Delete")) { _, which ->
                 if (which == 0) showRenameDialog(id, title)
@@ -142,16 +154,26 @@ class PlaylistListActivity : AppCompatActivity() {
     }
 
     private fun showRenameDialog(id: Long, title: String) {
-        val input = EditText(this).apply { setText(title) }
-        AlertDialog.Builder(this).setTitle("Rename").setView(wrapInMargin(input))
+        val til = TextInputLayout(this).apply {
+            hint = "Rename"
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+        }
+        val et = TextInputEditText(til.context).apply { setText(title) }
+        til.addView(et)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Rename")
+            .setView(wrapInMargin(til))
             .setPositiveButton("Save") { _, _ ->
-                repo.renamePlaylist(id, input.text.toString().trim())
+                repo.renamePlaylist(id, et.text.toString().trim())
                 loadData()
-            }.show()
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun confirmDelete(id: Long, title: String) {
-        AlertDialog.Builder(this).setTitle("Delete \"$title\"?")
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Delete \"$title\"?")
+            .setMessage("Are you sure you want to delete this playlist?")
             .setPositiveButton("Delete") { _, _ ->
                 repo.deletePlaylist(id)
                 loadData()
