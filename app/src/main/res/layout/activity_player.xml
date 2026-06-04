@@ -374,12 +374,11 @@
 
                             <ImageButton
                                 android:id="@+id/btnPlayPause"
-                                android:layout_width="0dp"
-                                android:layout_height="56dp"
-                                android:layout_weight="1.2"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
                                 android:background="@drawable/bg_button_outline_red"
                                 android:contentDescription="@string/play"
-                                android:padding="16dp"
+                                android:padding="10dp"
                                 android:scaleType="fitCenter"
                                 android:src="@drawable/ic_play_custom" />
 
@@ -407,12 +406,11 @@
 
                             <ImageButton
                                 android:id="@+id/btnStop"
-                                android:layout_width="0dp"
-                                android:layout_height="56dp"
-                                android:layout_weight="1"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
                                 android:background="@drawable/bg_button_outline_neutral"
                                 android:contentDescription="@string/stop"
-                                android:padding="18dp"
+                                android:padding="10dp"
                                 android:scaleType="fitCenter"
                                 android:src="@drawable/ic_close_custom" />
                         </LinearLayout>

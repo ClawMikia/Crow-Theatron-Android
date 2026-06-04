@@ -309,15 +309,25 @@ class PlayerActivity : AppCompatActivity() {
         val item = mediaItemFor(working)
         val currentUri = exo.currentMediaItem?.localConfiguration?.uri?.toString()
         val newUri = item.localConfiguration?.uri?.toString()
+
         if (currentUri != newUri) {
             exo.stop(); exo.clearMediaItems(); exo.setMediaItem(item); exo.prepare()
-            val startMs = working.trimStartMs.coerceAtLeast(0L)
-            exo.seekTo(startMs)
-            working = working.copy(positionMs = startMs)
         }
-        applyPitchAndSpeed(working.pitchSemitones, currentSpeed); exo.volume = currentVolume * working.audioBoost.coerceIn(1f, 2f); exo.repeatMode = Player.REPEAT_MODE_OFF; exo.playWhenReady = play
+        
+        // Always seek to the intended position (either resume point or trim start)
+        val targetPos = working.positionMs.coerceAtLeast(working.trimStartMs)
+        exo.seekTo(targetPos)
+        working = working.copy(positionMs = targetPos)
+
+        applyPitchAndSpeed(working.pitchSemitones, currentSpeed)
+        exo.volume = currentVolume * working.audioBoost.coerceIn(1f, 2f)
+        exo.repeatMode = Player.REPEAT_MODE_OFF
+        exo.playWhenReady = play
+        
         binding.playerView.postDelayed({ applyEnhancementMatrix() }, 150L)
-        updatePlayPauseIcon(); bindUiFromWorking(); playbackService?.updateNotification(working.title, if (play) "Playing" else "Paused")
+        updatePlayPauseIcon()
+        bindUiFromWorking()
+        playbackService?.updateNotification(working.title, if (play) "Playing" else "Paused")
     }
 
     private fun applyPitchAndSpeed(semitones: Int, speed: Float) { val pitch = 2.0.pow(semitones / 12.0).toFloat(); player?.playbackParameters = PlaybackParameters(speed.coerceIn(0.5f, 2.0f), pitch) }
@@ -380,7 +390,7 @@ class PlayerActivity : AppCompatActivity() {
         val start = working.trimStartMs
         val end = if (working.trimEndMs > 0) working.trimEndMs else fullDur
         
-        if (working.trimEndMs > 0L && pos >= working.trimEndMs) { handleTrimEndReached(); return }
+        if (!userScrubbingPlayback && working.trimEndMs > 0L && pos >= working.trimEndMs) { handleTrimEndReached(); return }
         
         // Progress relative to trim
         val trimmedDur = max(end - start, 1L)
@@ -393,7 +403,23 @@ class PlayerActivity : AppCompatActivity() {
         updateTimeLabel(pos, fullDur); updatePlayPauseIcon()
     }
 
-    private fun handleTrimEndReached() { val exo = player ?: return; if (binding.switchLoop.isChecked) { exo.seekTo(working.trimStartMs.coerceAtLeast(0L)); exo.play() } else { exo.pause(); if (binding.switchAutoNext.isChecked) playAdjacent(1) } }
+    private fun handleTrimEndReached() {
+        val exo = player ?: return
+        // Reset saved position to start for this video since it "finished"
+        repo.savePlaybackPosition(working.id, working.trimStartMs)
+        
+        if (binding.switchLoop.isChecked) {
+            val startMs = working.trimStartMs.coerceAtLeast(0L)
+            exo.seekTo(startMs)
+            exo.play()
+            // Immediate UI feedback for loop
+            working = working.copy(positionMs = startMs)
+            bindUiFromWorking()
+        } else {
+            exo.pause()
+            if (binding.switchAutoNext.isChecked) playAdjacent(1)
+        }
+    }
     private fun updateTimeLabel(absPos: Long, dur: Long) {
         val start = working.trimStartMs
         val end = if (working.trimEndMs > 0) working.trimEndMs else dur
@@ -681,13 +707,32 @@ class PlayerActivity : AppCompatActivity() {
     private fun applySpeedStep(progress: Int) { currentSpeed = progressToSpeed(progress); binding.tvSpeedValue.text = speedLabel(currentSpeed); working = working.copy(playbackSpeed = currentSpeed); applyPitchAndSpeed(working.pitchSemitones, currentSpeed) }
     private fun applyVolumeStep(progress: Int) { currentVolume = progress / 100f; binding.tvVolumeValue.text = "$progress%"; working = working.copy(volumeLevel = currentVolume); player?.volume = currentVolume * working.audioBoost }
     private fun persistPrefs() { if (working.id > 0) repo.savePreferences(working) }
-    private fun persistProgress() { if (working.id > 0) repo.savePlaybackPosition(working.id, player?.currentPosition ?: 0L) }
+    private fun persistProgress() {
+        val exo = player ?: return
+        if (working.id <= 0) return
+        val pos = exo.currentPosition
+        val dur = exo.duration
+        val end = if (working.trimEndMs > 0) working.trimEndMs else dur
+        // If we are at the end of the video/trim, save the start position so it doesn't resume at the end next time
+        val savePos = if (end > 0 && pos >= end - 800) working.trimStartMs else pos
+        repo.savePlaybackPosition(working.id, savePos)
+    }
 
     private fun jumpBy(deltaSec: Int) { val exo = player ?: return; val dur = exo.duration; if (dur <= 0L) return; val newPos = (exo.currentPosition + deltaSec * 1000L).coerceIn(0L, dur); exo.seekTo(newPos); tickTimeline() }
     private fun playAdjacent(delta: Int) {
-        persistProgress(); val next = playlistIndex + delta; if (next < 0 || next >= playlistIds.size) return
-        playlistIndex = next; val fresh = repo.getById(playlistIds[playlistIndex]) ?: return
-        working = fresh.copy(positionMs = 0L); currentSpeed = working.playbackSpeed; currentVolume = working.volumeLevel; chapters = repo.listChapters(working.id); bindUiFromWorking(); attachCurrentMedia(play = true)
+        persistProgress()
+        val next = playlistIndex + delta
+        if (next < 0 || next >= playlistIds.size) return
+        playlistIndex = next
+        val fresh = repo.getById(playlistIds[playlistIndex]) ?: return
+        
+        // Auto-playing to next song should start at its trim start
+        working = fresh.copy(positionMs = fresh.trimStartMs)
+        currentSpeed = working.playbackSpeed.coerceIn(0.5f, 2.0f)
+        currentVolume = working.volumeLevel.coerceIn(0f, 1f)
+        chapters = repo.listChapters(working.id)
+        
+        attachCurrentMedia(play = true)
     }
 
     private fun readTrimFromSeekBars() { val full = max(metaDurationMs(), 1L); val start = binding.seekTrimStart.progress * full / 1000L; var end = binding.seekTrimEnd.progress * full / 1000L; if (end <= start + 500L) end = min(start + 500L, full); working = working.copy(trimStartMs = start, trimEndMs = if (end >= full - 250L) 0L else end) }
@@ -695,8 +740,17 @@ class PlayerActivity : AppCompatActivity() {
     private fun toggleFullscreen(enter: Boolean) {
         isFullscreen = enter
         if (enter) {
-            if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            val videoSize = player?.videoSize
+            if (videoSize != null && videoSize.width > 0 && videoSize.height > 0) {
+                if (videoSize.height > videoSize.width) {
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                } else {
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                }
+            } else {
+                if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                }
             }
             binding.fullscreenOverlay.visibility = View.VISIBLE
             binding.toolbar.visibility = View.GONE
@@ -730,10 +784,11 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun toggleFsOrientation() {
-        requestedOrientation = if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+        requestedOrientation = if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT || 
+            requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT) {
             ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
         }
     }
 
