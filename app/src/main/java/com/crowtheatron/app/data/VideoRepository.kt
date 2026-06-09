@@ -62,6 +62,15 @@ class VideoRepository(context: Context) {
     fun deleteAllChapters(videoId: Long) = db.deleteChaptersForVideo(videoId)
     fun listChapters(videoId: Long): List<ChapterMarker> = db.listChaptersForVideo(videoId)
 
+    // ── Timeline Skips ────────────────────────────────────────────────────────
+
+    fun addSkip(videoId: Long, startMs: Long, endMs: Long, label: String = "Skip"): Long =
+        db.insertSkip(TimelineSkip(videoId = videoId, startMs = startMs, endMs = endMs, label = label))
+
+    fun deleteSkip(id: Long) = db.deleteSkip(id)
+    fun deleteAllSkips(videoId: Long) = db.deleteSkipsForVideo(videoId)
+    fun listSkips(videoId: Long): List<TimelineSkip> = db.listSkipsForVideo(videoId)
+
     // ── Playlists ─────────────────────────────────────────────────────────────
 
     fun createPlaylist(title: String): Long = db.insertPlaylist(title)

@@ -37,6 +37,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.crowtheatron.app.R
 import com.crowtheatron.app.data.ChapterMarker
 import com.crowtheatron.app.data.EnhancementMode
+import com.crowtheatron.app.data.TimelineSkip
 import com.crowtheatron.app.data.VideoEntity
 import com.crowtheatron.app.data.VideoRepository
 import com.crowtheatron.app.databinding.ActivityPlayerBinding
@@ -48,6 +49,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.random.Random
 
 class PlayerActivity : AppCompatActivity() {
 
@@ -66,6 +68,7 @@ class PlayerActivity : AppCompatActivity() {
     private var isBindingUi = false
     private var isFsPanelsVisible = true
     private var chapters = listOf<ChapterMarker>()
+    private var skips = listOf<TimelineSkip>()
 
     private var currentSpeed  = 1.0f
     private var currentVolume = 1.0f
@@ -168,6 +171,7 @@ class PlayerActivity : AppCompatActivity() {
         currentZoom = working.zoomLevel.coerceIn(1f, 3f)
         currentBrightness = 0.5f
         chapters = repo.listChapters(working.id)
+        skips = repo.listSkips(working.id)
 
         setupGestures()
         setupEnhancementSpinner()
@@ -261,6 +265,7 @@ class PlayerActivity : AppCompatActivity() {
                 currentSpeed = working.playbackSpeed.coerceIn(0.5f, 2.0f)
                 currentVolume = working.volumeLevel.coerceIn(0f, 1f)
                 chapters = repo.listChapters(working.id)
+                skips = repo.listSkips(working.id)
                 if (wasSame) {
                     val startMs = working.trimStartMs.coerceAtLeast(0L)
                     player?.seekTo(startMs)
@@ -379,7 +384,20 @@ class PlayerActivity : AppCompatActivity() {
         binding.playerView.setOnTouchListener { _, event -> scaleGestureDetector?.onTouchEvent(event); if (scaleGestureDetector?.isInProgress == false) gestureDetector.onTouchEvent(event); true }
     }
 
-    private fun showGestureHint(text: String) { binding.gestureHintText.text = text; binding.gestureHintOverlay.visibility = View.VISIBLE; binding.gestureHintOverlay.alpha = 1f; handler.removeCallbacks(hideGestureHintRunnable); handler.postDelayed(hideGestureHintRunnable, 800L) }
+    private fun showGestureHint(text: String?, iconRes: Int? = null) {
+        binding.gestureHintText.text = text ?: ""
+        binding.gestureHintText.visibility = if (text.isNullOrBlank()) View.GONE else View.VISIBLE
+        if (iconRes != null) {
+            binding.gestureHintIcon.setImageResource(iconRes)
+            binding.gestureHintIcon.visibility = View.VISIBLE
+        } else {
+            binding.gestureHintIcon.visibility = View.GONE
+        }
+        binding.gestureHintOverlay.visibility = View.VISIBLE
+        binding.gestureHintOverlay.alpha = 1f
+        handler.removeCallbacks(hideGestureHintRunnable)
+        handler.postDelayed(hideGestureHintRunnable, 800L)
+    }
     private val hideGestureHintRunnable = Runnable { binding.gestureHintOverlay.animate().alpha(0f).setDuration(300L).withEndAction { binding.gestureHintOverlay.visibility = View.GONE }.start() }
 
     private fun metaDurationMs(): Long { val contentDur = player?.contentDuration ?: C.TIME_UNSET; if (contentDur != C.TIME_UNSET && contentDur > 0L) return contentDur; return working.durationMs.takeIf { it > 0L } ?: 1L }
@@ -387,6 +405,16 @@ class PlayerActivity : AppCompatActivity() {
     private fun tickTimeline() {
         val exo = player ?: return; val fullDur = exo.duration; if (fullDur <= 0L) return; val pos = exo.currentPosition
         
+        // Handle timeline skips
+        if (!userScrubbingPlayback) {
+            val skip = skips.find { pos >= it.startMs && pos < it.endMs }
+            if (skip != null) {
+                exo.seekTo(skip.endMs)
+                showGestureHint(null, R.drawable.ic_trim)
+                return
+            }
+        }
+
         val start = working.trimStartMs
         val end = if (working.trimEndMs > 0) working.trimEndMs else fullDur
         
@@ -437,11 +465,11 @@ class PlayerActivity : AppCompatActivity() {
     private fun updatePlayPauseIcon() {
         val isPlaying = player?.isPlaying == true
         val iconRes = if (isPlaying) R.drawable.ic_pause_custom else R.drawable.ic_play_custom
-        binding.btnPlayPause.setImageResource(iconRes)
+        binding.btnPlayPause.post { binding.btnPlayPause.setImageResource(iconRes) }
         
         // Fullscreen overlay still uses system icons for simplicity or can be updated too
         val fsIcon = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-        binding.btnFsPlayPause.setImageResource(fsIcon)
+        binding.btnFsPlayPause.post { binding.btnFsPlayPause.setImageResource(fsIcon) }
     }
     private fun updateServiceNotification() { val state = if (player?.isPlaying == true) "Playing" else "Paused"; playbackService?.updateNotification(working.title, state) }
 
@@ -452,10 +480,14 @@ class PlayerActivity : AppCompatActivity() {
             binding.seekPitch.progress = working.pitchSemitones.coerceIn(-6, 6) + 6; binding.pitchLabel.text = pitchLabel(working.pitchSemitones.coerceIn(-6, 6))
             binding.seekSpeed.progress = speedToProgress(currentSpeed); binding.tvSpeedValue.text = speedLabel(currentSpeed)
             binding.seekVolume.progress = (currentVolume * 100).toInt(); binding.tvVolumeValue.text = "${(currentVolume * 100).toInt()}%"
-            binding.switchAutoNext.isChecked = working.autoPlayNext; binding.switchLoop.isChecked = working.loopPlayback
+            binding.switchAutoNext.isChecked = working.autoPlayNext
+            binding.switchLoop.isChecked = working.loopPlayback
+            binding.autoNextModeGroup.visibility = if (working.autoPlayNext) View.VISIBLE else View.GONE
+            binding.rgAutoNextMode.check(if (working.shufflePlaylist) R.id.rbAutoNextRandom else R.id.rbAutoNextSequential)
             binding.btnFavorite.text = getString(if (working.favorite) R.string.favorite_off else R.string.favorite_on)
             binding.spinnerEnhancement.setSelection(EnhancementMode.entries.indexOf(working.enhancement).coerceAtLeast(0))
             bindTrimSeekers(); updateTimeLabel(working.positionMs.coerceAtLeast(0L), metaDurationMs())
+            updateSkipsUi()
         } finally { isBindingUi = false }
     }
 
@@ -478,20 +510,24 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupControls() {
-        binding.btnPlayPause.setOnClickListener {
-            val exo = player ?: return@setOnClickListener
-            if (exo.isPlaying) {
-                exo.pause()
-            } else {
-                if (exo.playbackState == Player.STATE_ENDED) {
-                    exo.seekTo(working.trimStartMs.coerceAtLeast(0L))
-                } else if (exo.playbackState == Player.STATE_IDLE) {
-                    exo.prepare()
-                }
-                exo.play()
-            }
+    private fun togglePlayPause() {
+        val exo = player ?: return
+        if (exo.isPlaying) {
+            exo.pause()
+            updatePlayPauseIcon()
+            return
         }
+        when (exo.playbackState) {
+            Player.STATE_IDLE -> exo.prepare()
+            Player.STATE_ENDED -> exo.seekTo(working.trimStartMs.coerceAtLeast(0L))
+        }
+        exo.playWhenReady = true
+        exo.play()
+        updatePlayPauseIcon()
+    }
+
+    private fun setupControls() {
+        binding.btnPlayPause.setOnClickListener { togglePlayPause() }
         binding.btnStop.setOnClickListener { player?.pause(); player?.seekTo(working.trimStartMs); persistProgress(); tickTimeline() }
         binding.btnRewind.setOnClickListener { jumpBy(-10) }; binding.btnForward.setOnClickListener { jumpBy(10) }
         binding.btnPrev.setOnClickListener { playAdjacent(-1) }; binding.btnNext.setOnClickListener { playAdjacent(1) }
@@ -529,6 +565,7 @@ class PlayerActivity : AppCompatActivity() {
         binding.seekSpeed.setOnSeekBarChangeListener(seekBarListener(onChange = { p, f -> if (f) applySpeedStep(p) }, onStop = { persistPrefs() }))
         
         setupTrimControls()
+        setupSkipControls()
         
         binding.btnFullscreen.setOnClickListener { toggleFullscreen(true) }
         binding.btnFsExit.setOnClickListener { toggleFullscreen(false) }
@@ -556,7 +593,19 @@ class PlayerActivity : AppCompatActivity() {
         })
 
         binding.switchLoop.setOnCheckedChangeListener { _, c -> if (!isBindingUi) { working = working.copy(loopPlayback = c); player?.repeatMode = if (c) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF; persistPrefs() } }
-        binding.switchAutoNext.setOnCheckedChangeListener { _, c -> if (!isBindingUi) { working = working.copy(autoPlayNext = c); persistPrefs() } }
+        binding.switchAutoNext.setOnCheckedChangeListener { _, c ->
+            if (!isBindingUi) {
+                working = working.copy(autoPlayNext = c)
+                binding.autoNextModeGroup.visibility = if (c) View.VISIBLE else View.GONE
+                persistPrefs()
+            }
+        }
+        binding.rgAutoNextMode.setOnCheckedChangeListener { _, checkedId ->
+            if (!isBindingUi) {
+                working = working.copy(shufflePlaylist = checkedId == R.id.rbAutoNextRandom)
+                persistPrefs()
+            }
+        }
         binding.btnFavorite.setOnClickListener { val next = !working.favorite; working = working.copy(favorite = next); repo.setFavorite(working.id, next); binding.btnFavorite.text = getString(if (next) R.string.favorite_off else R.string.favorite_on) }
         binding.btnResetAll.setOnClickListener { resetAllState() }
         binding.btnSavePrefs.setOnClickListener { readTrimFromSeekBars(); repo.savePreferences(working); showCrowMessage("Preferences Saved") }
@@ -624,6 +673,164 @@ class PlayerActivity : AppCompatActivity() {
         tickTimeline()
     }
 
+    private fun setupSkipControls() {
+        binding.btnAddSkip.setOnClickListener { showAddSkipDialog() }
+        binding.btnManageSkips.setOnClickListener { showManageSkipsDialog() }
+    }
+
+    private fun updateSkipsUi() {
+        if (skips.isEmpty()) {
+            binding.tvSkipsSummary.text = "No segments skipped"
+            binding.btnManageSkips.visibility = View.GONE
+        } else {
+            binding.tvSkipsSummary.text = "${skips.size} segments skipped"
+            binding.btnManageSkips.visibility = View.VISIBLE
+        }
+        drawSkipsOnSeekbars()
+    }
+
+    private fun drawSkipsOnSeekbars() {
+        val full = max(metaDurationMs(), 1L)
+        
+        fun populate(overlay: FrameLayout) {
+            overlay.removeAllViews()
+            for (skip in skips) {
+                val skipView = View(this)
+                skipView.setBackgroundColor(resources.getColor(R.color.crow_accent_pink, theme))
+                val startPercent = skip.startMs.toFloat() / full
+                val endPercent = skip.endMs.toFloat() / full
+                val widthPercent = endPercent - startPercent
+                
+                val lp = FrameLayout.LayoutParams(0, -1)
+                overlay.addView(skipView, lp)
+                
+                // We'll use a post or a layout listener to set width/margin based on parent width
+                overlay.post {
+                    val parentWidth = overlay.width
+                    if (parentWidth > 0) {
+                        val nlp = skipView.layoutParams as FrameLayout.LayoutParams
+                        nlp.width = (parentWidth * widthPercent).toInt().coerceAtLeast(4)
+                        nlp.leftMargin = (parentWidth * startPercent).toInt()
+                        skipView.layoutParams = nlp
+                    }
+                }
+            }
+        }
+        
+        populate(binding.skipsOverlay)
+        populate(binding.fsSkipsOverlay)
+    }
+
+    private fun showAddSkipDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_skip, null)
+        val etStart = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSkipStart)
+        val etEnd = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSkipEnd)
+
+        // Initial values based on current position
+        val currentMs = player?.currentPosition ?: 0L
+        etStart.setText(FormatUtils.formatDuration(currentMs))
+        etEnd.setText(FormatUtils.formatDuration(currentMs + 5000L))
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .create()
+
+        dialogView.findViewById<View>(R.id.btnCancel).setOnClickListener { dialog.dismiss() }
+        dialogView.findViewById<View>(R.id.btnSave).setOnClickListener {
+            val startMs = parseTime(etStart.text.toString())
+            val endMs = parseTime(etEnd.text.toString())
+
+            if (startMs < 0 || endMs < 0 || endMs <= startMs) {
+                showCrowMessage("Invalid range", "Please enter valid times (e.g. 1:30 or 90)")
+                return@setOnClickListener
+            }
+            repo.addSkip(working.id, startMs, endMs, "Skip ${FormatUtils.formatDuration(startMs)}")
+            skips = repo.listSkips(working.id)
+            updateSkipsUi()
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
+    private fun showEditSkipDialog(skip: TimelineSkip) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_skip, null)
+        dialogView.findViewById<android.widget.TextView>(R.id.tvSkipDialogTitle).text = "Edit Skip Segment"
+        
+        val etStart = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSkipStart)
+        val etEnd = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSkipEnd)
+
+        etStart.setText(FormatUtils.formatDuration(skip.startMs))
+        etEnd.setText(FormatUtils.formatDuration(skip.endMs))
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .create()
+
+        dialogView.findViewById<View>(R.id.btnCancel).setOnClickListener { dialog.dismiss() }
+        dialogView.findViewById<View>(R.id.btnSave).setOnClickListener {
+            val startMs = parseTime(etStart.text.toString())
+            val endMs = parseTime(etEnd.text.toString())
+
+            if (startMs < 0 || endMs < 0 || endMs <= startMs) {
+                showCrowMessage("Invalid range", "Please enter valid times")
+                return@setOnClickListener
+            }
+            // We don't have updateSkip in repo, so we delete and re-add or add update method. 
+            // I'll add updateSkip to repo/db later or just re-add for now if I don't want to change repo again.
+            // Actually I should add updateSkip to repo.
+            repo.deleteSkip(skip.id)
+            repo.addSkip(working.id, startMs, endMs, "Skip ${FormatUtils.formatDuration(startMs)}")
+            skips = repo.listSkips(working.id)
+            updateSkipsUi()
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
+    private fun parseTime(input: String): Long {
+        if (input.isBlank()) return -1L
+        return try {
+            if (input.contains(":")) {
+                val parts = input.split(":")
+                if (parts.size == 2) {
+                    val m = parts[0].toLong()
+                    val s = parts[1].toLong()
+                    (m * 60 + s) * 1000L
+                } else if (parts.size == 3) {
+                    val h = parts[0].toLong()
+                    val m = parts[1].toLong()
+                    val s = parts[2].toLong()
+                    (h * 3600 + m * 60 + s) * 1000L
+                } else -1L
+            } else {
+                input.toLong() * 1000L
+            }
+        } catch (e: Exception) { -1L }
+    }
+
+    private fun showManageSkipsDialog() {
+        val skipStrings = skips.map { "${FormatUtils.formatDuration(it.startMs)} - ${FormatUtils.formatDuration(it.endMs)}" }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Timeline Skips")
+            .setItems(skipStrings.toTypedArray()) { _, which ->
+                val skip = skips[which]
+                val options = arrayOf("Edit", "Delete")
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("Segment Option")
+                    .setItems(options) { _, optIndex ->
+                        if (optIndex == 0) showEditSkipDialog(skip)
+                        else {
+                            repo.deleteSkip(skip.id)
+                            skips = repo.listSkips(working.id)
+                            updateSkipsUi()
+                        }
+                    }
+                    .show()
+            }
+            .setPositiveButton("Close", null)
+            .show()
+    }
+
     private fun toggleMute() {
         if (isMuted) { currentVolume = preMuteVolume; isMuted = false; binding.btnMute.setImageResource(android.R.drawable.ic_lock_silent_mode_off) }
         else { preMuteVolume = currentVolume; currentVolume = 0f; isMuted = true; binding.btnMute.setImageResource(android.R.drawable.ic_lock_silent_mode) }
@@ -633,8 +840,9 @@ class PlayerActivity : AppCompatActivity() {
     private fun resetAllState() {
         val original = repo.getById(working.id) ?: return
         working = VideoEntity(id = original.id, uriString = original.uriString, title = original.title, folderGroup = original.folderGroup, durationMs = original.durationMs, sizeBytes = original.sizeBytes, thumbnail = original.thumbnail)
-        repo.savePreferences(working); repo.savePlaybackPosition(working.id, 0L); repo.deleteAllChapters(working.id)
+        repo.savePreferences(working); repo.savePlaybackPosition(working.id, 0L); repo.deleteAllChapters(working.id); repo.deleteAllSkips(working.id)
         player?.seekTo(0L); currentSpeed = 1.0f; currentVolume = 1.0f; isMuted = false
+        skips = emptyList()
         applyPitchAndSpeed(0, 1.0f); player?.volume = 1.0f; isBindingUi = true; bindUiFromWorking(); applyEnhancementMatrix(); applyZoom(1.0f); isBindingUi = false
     }
 
@@ -731,6 +939,7 @@ class PlayerActivity : AppCompatActivity() {
         currentSpeed = working.playbackSpeed.coerceIn(0.5f, 2.0f)
         currentVolume = working.volumeLevel.coerceIn(0f, 1f)
         chapters = repo.listChapters(working.id)
+        skips = repo.listSkips(working.id)
         
         attachCurrentMedia(play = true)
     }

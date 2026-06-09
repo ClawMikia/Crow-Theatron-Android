@@ -55,10 +55,10 @@
 
     <!-- Input Styles -->
     <style name="Widget.CrowTheatron.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
-        <item name="boxStrokeColor">@color/crow_accent_yellow</item>
+        <item name="boxStrokeColor">@color/crow_accent_pink</item>
         <item name="boxStrokeWidth">1.5dp</item>
         <item name="boxStrokeWidthFocused">2.5dp</item>
-        <item name="hintTextColor">@color/crow_accent_yellow</item>
+        <item name="hintTextColor">@color/crow_accent_pink</item>
         <item name="android:textColorHint">@color/crow_on_muted</item>
         <item name="boxBackgroundColor">@color/crow_surface</item>
         <item name="shapeAppearance">@style/ShapeAppearance.CrowTheatron.SmallComponent</item>

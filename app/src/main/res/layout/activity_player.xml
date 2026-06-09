@@ -34,7 +34,6 @@
             android:id="@+id/playerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:show_buffering="when_playing"
             app:surface_type="texture_view"
             app:use_controller="false" />
 
@@ -53,18 +52,33 @@
             android:layout_gravity="center"
             android:background="#99000000"
             android:paddingStart="20dp"
-            android:paddingTop="10dp"
+            android:paddingTop="15dp"
             android:paddingEnd="20dp"
-            android:paddingBottom="10dp"
+            android:paddingBottom="15dp"
             android:visibility="gone">
 
-            <TextView
-                android:id="@+id/gestureHintText"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/crow_on_bg"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/gestureHintIcon"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone"
+                    android:tint="@color/crow_accent_pink" />
+
+                <TextView
+                    android:id="@+id/gestureHintText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/crow_on_bg"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </FrameLayout>
 
         <!-- Fullscreen controls overlay -->
@@ -167,14 +181,29 @@
                 android:background="#44000000"
                 app:layout_constraintBottom_toBottomOf="parent">
 
-                <SeekBar
-                    android:id="@+id/seekFs"
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:max="1000"
-                    android:progressBackgroundTint="@color/crow_seekbar_bg"
-                    android:progressTint="@color/crow_accent_red"
-                    android:thumbTint="@color/crow_accent_red" />
+                    android:layout_height="wrap_content">
+
+                    <SeekBar
+                        android:id="@+id/seekFs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="1000"
+                        android:progressBackgroundTint="@color/crow_seekbar_bg"
+                        android:progressTint="@color/crow_accent_red"
+                        android:thumbTint="@color/crow_accent_red" />
+
+                    <FrameLayout
+                        android:id="@+id/fsSkipsOverlay"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </FrameLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -327,11 +356,11 @@
                             android:id="@+id/btnAddChapter"
                             android:layout_width="36dp"
                             android:layout_height="36dp"
-                            android:background="@drawable/bg_button_outline_yellow"
+                            android:background="@drawable/bg_button_outline_pink"
                             android:contentDescription="Add chapter"
                             android:padding="7dp"
                             android:src="@drawable/ic_check"
-                            android:tint="@color/crow_accent_yellow" />
+                            android:tint="@color/crow_accent_pink" />
                     </LinearLayout>
 
                     <!-- Transport controls row -->
@@ -417,16 +446,31 @@
                     </HorizontalScrollView>
 
                     <!-- Seekbar -->
-                    <SeekBar
-                        android:id="@+id/seekPlayback"
+                    <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="13dp"
-                        android:layout_marginBottom="10dp"
-                        android:max="1000"
-                        android:progressBackgroundTint="@color/crow_seekbar_bg"
-                        android:progressTint="@color/crow_accent_red"
-                        android:thumb="@drawable/seekbar_thumb" />
+                        android:layout_marginBottom="10dp">
+
+                        <SeekBar
+                            android:id="@+id/seekPlayback"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:max="1000"
+                            android:progressBackgroundTint="@color/crow_seekbar_bg"
+                            android:progressTint="@color/crow_accent_red"
+                            android:thumb="@drawable/seekbar_thumb" />
+
+                        <FrameLayout
+                            android:id="@+id/skipsOverlay"
+                            android:layout_width="match_parent"
+                            android:layout_height="4dp"
+                            android:layout_gravity="center_vertical"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="16dp"
+                            android:clickable="false"
+                            android:focusable="false" />
+                    </FrameLayout>
 
                     <!-- Time row -->
                     <LinearLayout
@@ -1202,6 +1246,89 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- ═══════════════════ TIMELINE SKIPS CARD ═══════════════════ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginEnd="16dp"
+                app:cardBackgroundColor="@color/crow_surface_elevated"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_menu_crop"
+                            android:tint="@color/crow_accent_pink" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:letterSpacing="0.14"
+                            android:paddingStart="8dp"
+                            android:text="TIMELINE SKIPS"
+                            android:textColor="@color/crow_on_bg"
+                            android:textSize="11sp" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnAddSkip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:background="@drawable/bg_button_outline_pink"
+                            android:fontFamily="@font/orbitron_bold"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:text="+ Add Skip"
+                            android:textAllCaps="false"
+                            android:textColor="@color/crow_accent_pink"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvSkipsSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/orbitron_regular"
+                        android:text="No segments skipped"
+                        android:textColor="@color/crow_accent_pink"
+                        android:textSize="11sp" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnManageSkips"
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_button_outline_pink"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"
+                        android:text="Manage All Skips"
+                        android:textAllCaps="false"
+                        android:textColor="@color/crow_accent_pink"
+                        android:textSize="10sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
             <!-- ═══════════════════ VISUAL ENHANCEMENT CARD ═══════════════════ -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
@@ -1317,6 +1444,53 @@
                             android:textSize="11sp"
                             app:thumbTint="@color/crow_accent_yellow"
                             app:trackDecorationTint="@color/crow_accent_yellow" />
+
+                        <LinearLayout
+                            android:id="@+id/autoNextModeGroup"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginTop="6dp"
+                            android:orientation="vertical"
+                            android:paddingStart="8dp"
+                            android:paddingBottom="4dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="4dp"
+                                android:fontFamily="@font/orbitron_regular"
+                                android:text="Auto-next order"
+                                android:textColor="@color/crow_on_muted"
+                                android:textSize="10sp" />
+
+                            <RadioGroup
+                                android:id="@+id/rgAutoNextMode"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+
+                                <RadioButton
+                                    android:id="@+id/rbAutoNextSequential"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:buttonTint="@color/crow_accent_pink"
+                                    android:fontFamily="@font/orbitron_regular"
+                                    android:text="Sequential"
+                                    android:textColor="@color/crow_on_bg"
+                                    android:textSize="10sp" />
+
+                                <RadioButton
+                                    android:id="@+id/rbAutoNextRandom"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:buttonTint="@color/crow_accent_pink"
+                                    android:fontFamily="@font/orbitron_regular"
+                                    android:text="Random"
+                                    android:textColor="@color/crow_on_bg"
+                                    android:textSize="10sp" />
+                            </RadioGroup>
+                        </LinearLayout>
 
                         <com.google.android.material.materialswitch.MaterialSwitch
                             android:id="@+id/switchLoop"

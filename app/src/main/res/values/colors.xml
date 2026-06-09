@@ -17,6 +17,7 @@
     <color name="crow_accent_orange">#FF8C00</color>   <!-- neon_orange  / trim/speed-->
     <color name="crow_accent_red">#FF2D55</color>      <!-- neon_pink/red / play     -->
     <color name="crow_accent_purple">#BF5FFF</color>   <!-- neon_purple  / enhancement-->
+    <color name="crow_accent_pink">#F21505</color>     <!-- bright red / skips -->
 
     <!-- Legacy aliases kept for any code referencing them -->
     <color name="crow_timeline_yellow">#E6C200</color>

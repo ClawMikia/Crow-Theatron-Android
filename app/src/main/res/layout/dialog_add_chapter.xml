@@ -25,7 +25,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:text="at 0:00"
-        android:textColor="@color/crow_accent_yellow"
+        android:textColor="@color/crow_accent_pink"
         android:textSize="12sp"
         android:fontFamily="@font/orbitron_regular" />
 
@@ -71,10 +71,10 @@
             android:id="@+id/btnAdd"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="@drawable/bg_button_outline_yellow"
+            android:background="@drawable/bg_button_outline_pink"
             android:contentDescription="Add Chapter"
             android:src="@drawable/ic_check"
-            android:tint="@color/crow_accent_yellow" />
+            android:tint="@color/crow_accent_pink" />
 
     </LinearLayout>
 

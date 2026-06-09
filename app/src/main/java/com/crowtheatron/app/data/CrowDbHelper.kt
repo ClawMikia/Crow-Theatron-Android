@@ -18,6 +18,8 @@ class CrowDbHelper(context: Context) :
         db.execSQL("CREATE INDEX idx_chapters_video  ON $TABLE_CHAPTERS($CHA_VIDEO_ID)")
         db.execSQL(CREATE_PLAYLISTS)
         db.execSQL(CREATE_PLAYLIST_VIDEOS)
+        db.execSQL(CREATE_TIMELINE_SKIPS)
+        db.execSQL("CREATE INDEX idx_skips_video     ON $TABLE_TIMELINE_SKIPS($SKI_VIDEO_ID)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -25,6 +27,26 @@ class CrowDbHelper(context: Context) :
             runCatching { db.execSQL(CREATE_PLAYLISTS) }
             runCatching { db.execSQL(CREATE_PLAYLIST_VIDEOS) }
         }
+        if (oldVersion < 6) {
+            // Ensure timeline_skips table exists (fixing potential failed migration in v5)
+            runCatching {
+                db.execSQL(CREATE_TIMELINE_SKIPS)
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_skips_video ON $TABLE_TIMELINE_SKIPS($SKI_VIDEO_ID)")
+            }
+        }
+        if (oldVersion < 7) {
+            runCatching { db.execSQL("ALTER TABLE $TABLE_VIDEOS ADD COLUMN shuffle_playlist INTEGER NOT NULL DEFAULT 0") }
+        }
+    }
+
+    override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        // Safe fallback: rebuild the schema so the app can launch instead of crashing on a version mismatch.
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_TIMELINE_SKIPS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_PLAYLIST_VIDEOS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_PLAYLISTS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_CHAPTERS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_VIDEOS")
+        onCreate(db)
     }
 
     // ── Videos ────────────────────────────────────────────────────────────────
@@ -195,6 +217,28 @@ class CrowDbHelper(context: Context) :
         return list
     }
 
+    // ── Timeline Skips ────────────────────────────────────────────────────────
+
+    fun insertSkip(s: TimelineSkip): Long =
+        writableDatabase.insert(TABLE_TIMELINE_SKIPS, null, s.toContentValues())
+
+    fun deleteSkip(id: Long) {
+        writableDatabase.delete(TABLE_TIMELINE_SKIPS, "$SKI_ID = ?", arrayOf(id.toString()))
+    }
+
+    fun deleteSkipsForVideo(videoId: Long) {
+        writableDatabase.delete(TABLE_TIMELINE_SKIPS, "$SKI_VIDEO_ID = ?", arrayOf(videoId.toString()))
+    }
+
+    fun listSkipsForVideo(videoId: Long): List<TimelineSkip> {
+        val list = mutableListOf<TimelineSkip>()
+        readableDatabase.query(
+            TABLE_TIMELINE_SKIPS, null, "$SKI_VIDEO_ID = ?", arrayOf(videoId.toString()),
+            null, null, "$SKI_START_MS ASC"
+        ).use { c -> while (c.moveToNext()) list.add(c.toSkip()) }
+        return list
+    }
+
     // ── Playlists ──────────────────────────────────────────────────────────────
 
     fun insertPlaylist(title: String): Long {
@@ -255,7 +299,7 @@ class CrowDbHelper(context: Context) :
 
     companion object {
         const val DB_NAME    = "crow_theatron.db"
-        const val DB_VERSION = 4
+        const val DB_VERSION = 6
 
         // ── videos table ──────────────────────────────────────────────────────
         const val TABLE_VIDEOS          = "videos"
@@ -383,6 +427,26 @@ class CrowDbHelper(context: Context) :
                 PRIMARY KEY ($PLV_PLAYLIST_ID, $PLV_VIDEO_ID)
             )
         """.trimIndent()
+
+        // ── timeline_skips table ──────────────────────────────────────────────
+        const val TABLE_TIMELINE_SKIPS  = "timeline_skips"
+        const val SKI_ID                = "id"
+        const val SKI_VIDEO_ID          = "video_id"
+        const val SKI_START_MS          = "start_ms"
+        const val SKI_END_MS            = "end_ms"
+        const val SKI_LABEL             = "label"
+        const val SKI_CREATED_AT        = "created_at"
+
+        private val CREATE_TIMELINE_SKIPS = """
+            CREATE TABLE IF NOT EXISTS $TABLE_TIMELINE_SKIPS (
+                $SKI_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                $SKI_VIDEO_ID INTEGER NOT NULL,
+                $SKI_START_MS INTEGER NOT NULL,
+                $SKI_END_MS INTEGER NOT NULL,
+                $SKI_LABEL TEXT NOT NULL,
+                $SKI_CREATED_AT INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent()
     }
 }
 
@@ -496,5 +560,28 @@ private fun android.database.Cursor.toChapter(): ChapterMarker {
         label           = str(CrowDbHelper.CHA_LABEL) ?: "",
         isAutoDetected  = int(CrowDbHelper.CHA_AUTO) == 1,
         createdAt       = lng(CrowDbHelper.CHA_CREATED_AT),
+    )
+}
+
+// ── Extension: TimelineSkip ↔ ContentValues ──────────────────────────────────
+
+private fun TimelineSkip.toContentValues(): ContentValues = ContentValues().apply {
+    put(CrowDbHelper.SKI_VIDEO_ID,   videoId)
+    put(CrowDbHelper.SKI_START_MS,   startMs)
+    put(CrowDbHelper.SKI_END_MS,     endMs)
+    put(CrowDbHelper.SKI_LABEL,      label)
+    put(CrowDbHelper.SKI_CREATED_AT, createdAt)
+}
+
+private fun android.database.Cursor.toSkip(): TimelineSkip {
+    fun str(col: String): String? = getColumnIndex(col).takeIf { it >= 0 }?.let { getString(it) }
+    fun lng(col: String): Long = getColumnIndex(col).takeIf { it >= 0 }?.let { getLong(it) } ?: 0L
+    return TimelineSkip(
+        id              = lng(CrowDbHelper.SKI_ID),
+        videoId         = lng(CrowDbHelper.SKI_VIDEO_ID),
+        startMs         = lng(CrowDbHelper.SKI_START_MS),
+        endMs           = lng(CrowDbHelper.SKI_END_MS),
+        label           = str(CrowDbHelper.SKI_LABEL) ?: "",
+        createdAt       = lng(CrowDbHelper.SKI_CREATED_AT),
     )
 }
