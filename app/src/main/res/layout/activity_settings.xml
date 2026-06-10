@@ -38,6 +38,7 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
                 app:cardBackgroundColor="@color/crow_surface_elevated"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp">
@@ -46,42 +47,52 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="18dp">
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="SKIP INTERVAL"
-                        android:textColor="@color/crow_accent_cyan"
-                        android:textSize="10sp"
+                        android:layout_marginBottom="14dp"
+                        android:fontFamily="@font/orbitron_bold"
                         android:letterSpacing="0.12"
                         android:textAllCaps="true"
-                        android:layout_marginBottom="8dp" />
+                        android:text="DISPLAY &amp; PLAYBACK"
+                        android:textColor="@color/crow_accent_yellow"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:text="Skip interval"
+                        android:textColor="@color/crow_on_bg"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/seekLabel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/default_seek_interval"
-                        android:textColor="@color/crow_on_bg"
-                        android:textSize="14sp"
-                        android:layout_marginBottom="12dp" />
+                        android:layout_marginBottom="10dp"
+                        android:text="How far rewind and fast forward jump."
+                        android:textColor="@color/crow_on_muted"
+                        android:textSize="11sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginBottom="18dp"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="12dp">
+                        android:gravity="center_vertical">
 
                         <TextView
                             android:id="@+id/seekValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            android:fontFamily="@font/orbitron_bold"
                             android:textColor="@color/crow_accent_cyan"
-                            android:textSize="32sp"
-                            android:textStyle="bold"
-                            android:layout_marginEnd="8dp" />
+                            android:textSize="32sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -95,8 +106,8 @@
                         android:id="@+id/seekBarInterval"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:enabled="false"
-                        android:max="0"
+                        android:enabled="true"
+                        android:max="59"
                         android:progressTint="@color/crow_accent_cyan"
                         android:progressBackgroundTint="@color/crow_divider"
                         android:thumbTint="@color/crow_accent_cyan" />
@@ -105,10 +116,125 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="Fast forward and rewind are fixed at 10 seconds."
+                        android:text="Tap the number to edit it directly."
                         android:textColor="@color/crow_on_muted"
                         android:textSize="12sp"
                         android:lineSpacingMultiplier="1.4" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="6dp"
+                        android:text="Pitch step"
+                        android:textColor="@color/crow_on_bg"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/pitchValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:textColor="@color/crow_accent_yellow"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:text="Playback speed step"
+                        android:textColor="@color/crow_on_bg"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/speedValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:textColor="@color/crow_accent_cyan"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:text="Timeline trim step"
+                        android:textColor="@color/crow_on_bg"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/trimValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:textColor="@color/crow_accent_pink"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:text="Volume step"
+                        android:textColor="@color/crow_on_bg"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/volumeValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:textColor="@color/crow_accent_green"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:text="Fast forward / rewind step"
+                        android:textColor="@color/crow_on_bg"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/ffrwValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        android:fontFamily="@font/orbitron_bold"
+                        android:textColor="@color/crow_accent_red"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnResetPlaybackDefaults"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:layout_marginBottom="2dp"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="48dp"
+                        android:text="Reset All"
+                        android:textAllCaps="false"
+                        android:textColor="@color/crow_accent_red"
+                        app:backgroundTint="@color/crow_surface"
+                        app:cornerRadius="14dp"
+                        app:strokeColor="@color/crow_accent_red"
+                        app:strokeWidth="1dp" />
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

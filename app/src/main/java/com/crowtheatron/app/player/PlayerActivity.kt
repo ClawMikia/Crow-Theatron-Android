@@ -36,6 +36,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.crowtheatron.app.R
 import com.crowtheatron.app.data.ChapterMarker
+import com.crowtheatron.app.data.AppPrefs
 import com.crowtheatron.app.data.EnhancementMode
 import com.crowtheatron.app.data.TimelineSkip
 import com.crowtheatron.app.data.VideoEntity
@@ -55,6 +56,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPlayerBinding
     private val repo by lazy { VideoRepository(this) }
+    private val prefs by lazy { AppPrefs(this) }
 
     private var player: ExoPlayer? = null
     private lateinit var playlistIds: LongArray
@@ -107,7 +109,10 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private val tickRunnable = object : Runnable {
-        override fun run() { if (!userScrubbingPlayback && playerReady) tickTimeline(); handler.postDelayed(this, 450L) }
+        override fun run() {
+            if (!userScrubbingPlayback) tickTimeline()
+            handler.postDelayed(this, 250L)
+        }
     }
 
     private val playerListener = object : Player.Listener {
@@ -121,7 +126,7 @@ class PlayerActivity : AppCompatActivity() {
                     }
                 }
                 isBindingUi = true; try { bindTrimSeekers() } finally { isBindingUi = false }
-                applyPitchAndSpeed(working.pitchSemitones, currentSpeed); applyZoom(working.zoomLevel); tickTimeline()
+                applyPitchAndSpeed(working.pitchSemitones, currentSpeed); applyZoom(working.zoomLevel); applyEnhancementMatrix(); tickTimeline()
             }
             if (state == Player.STATE_ENDED) handleTrimEndReached()
             updatePlayPauseIcon(); updateServiceNotification()
@@ -341,11 +346,16 @@ class PlayerActivity : AppCompatActivity() {
         val o = binding.enhancementOverlay
         when (working.enhancement) {
             EnhancementMode.NONE -> o.visibility = View.GONE
+            EnhancementMode.VIVID_HD -> { o.setBackgroundColor(Color.argb(22, 120, 200, 255)); o.visibility = View.VISIBLE }
+            EnhancementMode.CINEMA_CONTRAST -> { o.setBackgroundColor(Color.argb(34, 0, 0, 0)); o.visibility = View.VISIBLE }
             EnhancementMode.WARM_FILM -> { o.setBackgroundColor(Color.argb(35, 255, 180, 80)); o.visibility = View.VISIBLE }
             EnhancementMode.COOL_HDR_SIM -> { o.setBackgroundColor(Color.argb(30, 80, 140, 255)); o.visibility = View.VISIBLE }
+            EnhancementMode.AMOLED -> { o.setBackgroundColor(Color.argb(44, 0, 0, 0)); o.visibility = View.VISIBLE }
             EnhancementMode.NIGHT_MODE -> { o.setBackgroundColor(Color.argb(40, 255, 80, 0)); o.visibility = View.VISIBLE }
+            EnhancementMode.ANIME -> { o.setBackgroundColor(Color.argb(24, 255, 255, 120)); o.visibility = View.VISIBLE }
             EnhancementMode.EYE_COMFORT -> { o.setBackgroundColor(Color.argb(30, 255, 200, 50)); o.visibility = View.VISIBLE }
-            else -> o.visibility = View.GONE
+            EnhancementMode.VIVID_OUTDOOR -> { o.setBackgroundColor(Color.argb(18, 0, 255, 150)); o.visibility = View.VISIBLE }
+            EnhancementMode.CINEMATIC_DARK -> { o.setBackgroundColor(Color.argb(42, 16, 16, 32)); o.visibility = View.VISIBLE }
         }
     }
 
@@ -360,7 +370,16 @@ class PlayerActivity : AppCompatActivity() {
         val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onDoubleTap(e: MotionEvent): Boolean {
                 val screenWidth = binding.playerView.width.toFloat()
-                if (e.x < screenWidth / 3f) { jumpBy(-10); showGestureHint("⏪ -10s") } else if (e.x > screenWidth * 2f / 3f) { jumpBy(+10); showGestureHint("⏩ +10s") } else player?.let { if (it.isPlaying) it.pause() else it.play() }
+                val jumpSec = prefs.defaultSeekJumpSec
+                if (e.x < screenWidth / 3f) {
+                    jumpBy(-jumpSec)
+                    showGestureHint("⏪ -${jumpSec}s")
+                } else if (e.x > screenWidth * 2f / 3f) {
+                    jumpBy(+jumpSec)
+                    showGestureHint("⏩ +${jumpSec}s")
+                } else {
+                    player?.let { if (it.isPlaying) it.pause() else it.play() }
+                }
                 return true
             }
             override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distX: Float, distY: Float): Boolean {
@@ -529,7 +548,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun setupControls() {
         binding.btnPlayPause.setOnClickListener { togglePlayPause() }
         binding.btnStop.setOnClickListener { player?.pause(); player?.seekTo(working.trimStartMs); persistProgress(); tickTimeline() }
-        binding.btnRewind.setOnClickListener { jumpBy(-10) }; binding.btnForward.setOnClickListener { jumpBy(10) }
+        binding.btnRewind.setOnClickListener { jumpBy(-prefs.defaultSeekJumpSec) }; binding.btnForward.setOnClickListener { jumpBy(prefs.defaultSeekJumpSec) }
         binding.btnPrev.setOnClickListener { playAdjacent(-1) }; binding.btnNext.setOnClickListener { playAdjacent(1) }
         binding.btnPip.setOnClickListener { enterPiP() }
         binding.btnPlaylist.setOnClickListener { showPlaylistSelectionDialog() }
@@ -550,17 +569,17 @@ class PlayerActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(sb: SeekBar?) { userScrubbingPlayback = true }
             override fun onStopTrackingTouch(sb: SeekBar?) { userScrubbingPlayback = false; persistProgress() }
         })
-        binding.btnVolumeDown.setOnClickListener { val np = ((currentVolume * 100).toInt() - 5).coerceIn(0, 100); binding.seekVolume.progress = np; applyVolumeStep(np); persistPrefs() }
-        binding.btnVolumeUp.setOnClickListener { val np = ((currentVolume * 100).toInt() + 5).coerceIn(0, 100); binding.seekVolume.progress = np; applyVolumeStep(np); persistPrefs() }
+        binding.btnVolumeDown.setOnClickListener { val np = ((currentVolume * 100).toInt() - prefs.defaultVolumeStepPercent).coerceIn(0, 100); binding.seekVolume.progress = np; applyVolumeStep(np); persistPrefs() }
+        binding.btnVolumeUp.setOnClickListener { val np = ((currentVolume * 100).toInt() + prefs.defaultVolumeStepPercent).coerceIn(0, 100); binding.seekVolume.progress = np; applyVolumeStep(np); persistPrefs() }
         binding.btnVolumeReset.setOnClickListener { binding.seekVolume.progress = 100; applyVolumeStep(100); persistPrefs() }
         binding.btnMute.setOnClickListener { toggleMute() }
         binding.seekVolume.setOnSeekBarChangeListener(seekBarListener(onChange = { p, f -> if (f) applyVolumeStep(p) }, onStop = { persistPrefs() }))
-        binding.btnPitchDown.setOnClickListener { val np = (binding.seekPitch.progress - 1).coerceAtLeast(0); binding.seekPitch.progress = np; applyPitchStep(np); persistPrefs() }
-        binding.btnPitchUp.setOnClickListener { val np = (binding.seekPitch.progress + 1).coerceAtMost(12); binding.seekPitch.progress = np; applyPitchStep(np); persistPrefs() }
+        binding.btnPitchDown.setOnClickListener { val step = prefs.defaultPitchStepSemitones.toInt().coerceAtLeast(1); val np = (binding.seekPitch.progress - step).coerceAtLeast(0); binding.seekPitch.progress = np; applyPitchStep(np); persistPrefs() }
+        binding.btnPitchUp.setOnClickListener { val step = prefs.defaultPitchStepSemitones.toInt().coerceAtLeast(1); val np = (binding.seekPitch.progress + step).coerceAtMost(12); binding.seekPitch.progress = np; applyPitchStep(np); persistPrefs() }
         binding.btnPitchReset.setOnClickListener { binding.seekPitch.progress = 6; applyPitchStep(6); persistPrefs() }
         binding.seekPitch.setOnSeekBarChangeListener(seekBarListener(onChange = { p, f -> if (f) applyPitchStep(p) }, onStop = { persistPrefs() }))
-        binding.btnSpeedDown.setOnClickListener { val np = (binding.seekSpeed.progress - 1).coerceAtLeast(0); binding.seekSpeed.progress = np; applySpeedStep(np); persistPrefs() }
-        binding.btnSpeedUp.setOnClickListener { val np = (binding.seekSpeed.progress + 1).coerceAtMost(30); binding.seekSpeed.progress = np; applySpeedStep(np); persistPrefs() }
+        binding.btnSpeedDown.setOnClickListener { val np = speedToProgress((currentSpeed - prefs.defaultSpeedStep).coerceAtLeast(0.5f)); binding.seekSpeed.progress = np; applySpeedStep(np); persistPrefs() }
+        binding.btnSpeedUp.setOnClickListener { val np = speedToProgress((currentSpeed + prefs.defaultSpeedStep).coerceAtMost(2.0f)); binding.seekSpeed.progress = np; applySpeedStep(np); persistPrefs() }
         binding.btnSpeedReset.setOnClickListener { val np = speedToProgress(1.0f); binding.seekSpeed.progress = np; applySpeedStep(np); persistPrefs() }
         binding.seekSpeed.setOnSeekBarChangeListener(seekBarListener(onChange = { p, f -> if (f) applySpeedStep(p) }, onStop = { persistPrefs() }))
         
@@ -640,10 +659,10 @@ class PlayerActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(sb: SeekBar?) { persistPrefs(); tickTimeline() }
         })
 
-        binding.btnTrimStartMinus.setOnClickListener { adjustTrimStart(-10000) }
-        binding.btnTrimStartPlus.setOnClickListener { adjustTrimStart(10000) }
-        binding.btnTrimEndMinus.setOnClickListener { adjustTrimEnd(-10000) }
-        binding.btnTrimEndPlus.setOnClickListener { adjustTrimEnd(10000) }
+        binding.btnTrimStartMinus.setOnClickListener { adjustTrimStart(-prefs.defaultTrimStepMs) }
+        binding.btnTrimStartPlus.setOnClickListener { adjustTrimStart(prefs.defaultTrimStepMs) }
+        binding.btnTrimEndMinus.setOnClickListener { adjustTrimEnd(-prefs.defaultTrimStepMs) }
+        binding.btnTrimEndPlus.setOnClickListener { adjustTrimEnd(prefs.defaultTrimStepMs) }
         binding.btnTrimReset.setOnClickListener { 
             working = working.copy(trimStartMs = 0L, trimEndMs = 0L)
             isBindingUi = true; bindTrimSeekers(); isBindingUi = false
@@ -1033,3 +1052,4 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_PLAYLIST_INDEX = "playlist_index"
     }
 }
+
