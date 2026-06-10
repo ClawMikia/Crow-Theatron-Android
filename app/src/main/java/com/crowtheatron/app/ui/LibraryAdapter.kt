@@ -58,7 +58,7 @@ class LibraryAdapter(
 
     inner class HeaderVH(private val b: ItemLibraryHeaderBinding) : RecyclerView.ViewHolder(b.root) {
         fun bind(header: LibraryListItem.Header) {
-            b.headerTitle.text = header.folder
+            b.headerTitle.text = "${header.folder} (${header.videoCount})"
             // Show expansion indicator
             b.headerTitle.setCompoundDrawablesWithIntrinsicBounds(
                 0, 0,

@@ -303,7 +303,7 @@ class LibraryActivity : AppCompatActivity() {
             else     -> {
                 if (allVideos.isEmpty()) emptyList()
                 else buildList {
-                    add(LibraryListItem.Header(binding.toolbar.title?.toString() ?: "", true))
+                    add(LibraryListItem.Header(binding.toolbar.title?.toString() ?: "", allVideos.size, true))
                     addAll(allVideos.map { LibraryListItem.VideoRow(it) })
                 }
             }
