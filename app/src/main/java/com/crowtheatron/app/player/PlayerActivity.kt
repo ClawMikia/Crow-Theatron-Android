@@ -548,6 +548,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun setupControls() {
         binding.btnPlayPause.setOnClickListener { togglePlayPause() }
         binding.btnStop.setOnClickListener { player?.pause(); player?.seekTo(working.trimStartMs); persistProgress(); tickTimeline() }
+        binding.btnRestart.setOnClickListener { restartCurrentPlayback() }
         binding.btnRewind.setOnClickListener { jumpBy(-prefs.defaultSeekJumpSec) }; binding.btnForward.setOnClickListener { jumpBy(prefs.defaultSeekJumpSec) }
         binding.btnPrev.setOnClickListener { playAdjacent(-1) }; binding.btnNext.setOnClickListener { playAdjacent(1) }
         binding.btnPip.setOnClickListener { enterPiP() }
@@ -934,6 +935,15 @@ class PlayerActivity : AppCompatActivity() {
     private fun applySpeedStep(progress: Int) { currentSpeed = progressToSpeed(progress); binding.tvSpeedValue.text = speedLabel(currentSpeed); working = working.copy(playbackSpeed = currentSpeed); applyPitchAndSpeed(working.pitchSemitones, currentSpeed) }
     private fun applyVolumeStep(progress: Int) { currentVolume = progress / 100f; binding.tvVolumeValue.text = "$progress%"; working = working.copy(volumeLevel = currentVolume); player?.volume = currentVolume * working.audioBoost }
     private fun persistPrefs() { if (working.id > 0) repo.savePreferences(working) }
+    private fun restartCurrentPlayback() {
+        val exo = player ?: return
+        val startMs = working.trimStartMs.coerceAtLeast(0L)
+        exo.seekTo(startMs)
+        exo.play()
+        working = working.copy(positionMs = startMs)
+        persistProgress()
+        tickTimeline()
+    }
     private fun persistProgress() {
         val exo = player ?: return
         if (working.id <= 0) return
@@ -948,13 +958,28 @@ class PlayerActivity : AppCompatActivity() {
     private fun jumpBy(deltaSec: Int) { val exo = player ?: return; val dur = exo.duration; if (dur <= 0L) return; val newPos = (exo.currentPosition + deltaSec * 1000L).coerceIn(0L, dur); exo.seekTo(newPos); tickTimeline() }
     private fun playAdjacent(delta: Int) {
         persistProgress()
-        val next = playlistIndex + delta
+        if (playlistIds.isEmpty()) return
+        val next = when {
+            working.shufflePlaylist && playlistIds.size > 1 -> {
+                var candidate: Int
+                do {
+                    candidate = Random.nextInt(playlistIds.size)
+                } while (candidate == playlistIndex)
+                candidate
+            }
+            else -> playlistIndex + delta
+        }
         if (next < 0 || next >= playlistIds.size) return
         playlistIndex = next
         val fresh = repo.getById(playlistIds[playlistIndex]) ?: return
         
         // Auto-playing to next song should start at its trim start
-        working = fresh.copy(positionMs = fresh.trimStartMs)
+        working = fresh.copy(
+            positionMs = fresh.trimStartMs,
+            autoPlayNext = working.autoPlayNext,
+            shufflePlaylist = working.shufflePlaylist
+        )
+        persistPrefs()
         currentSpeed = working.playbackSpeed.coerceIn(0.5f, 2.0f)
         currentVolume = working.volumeLevel.coerceIn(0f, 1f)
         chapters = repo.listChapters(working.id)

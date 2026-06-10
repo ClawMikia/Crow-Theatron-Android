@@ -21,6 +21,7 @@
     <string name="play">Play</string>
     <string name="pause">Pause</string>
     <string name="stop">Stop</string>
+    <string name="restart">Restart</string>
     <string name="pitch_label">Pitch / Key (%1$d)</string>
     <string name="trim_start">Trim Start</string>
     <string name="trim_end">Trim End</string>
