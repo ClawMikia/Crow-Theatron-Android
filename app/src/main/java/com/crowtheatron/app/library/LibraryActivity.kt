@@ -130,6 +130,7 @@ class LibraryActivity : AppCompatActivity() {
                 refreshData()
             } else null,
             onOpen = { videoId, playlistIds, index ->
+                binding.miniPlayerContainer.visibility = View.GONE
                 startActivity(
                     Intent(this, PlayerActivity::class.java)
                         .putExtra(PlayerActivity.EXTRA_VIDEO_ID, videoId)
@@ -233,6 +234,7 @@ class LibraryActivity : AppCompatActivity() {
             }
             
             binding.miniPlayerContainer.setOnClickListener {
+                binding.miniPlayerContainer.visibility = View.GONE
                 val intent = Intent(this, PlayerActivity::class.java).apply {
                     putExtra(PlayerActivity.EXTRA_VIDEO_ID, currentMediaItem?.mediaId?.toLongOrNull() ?: -1L)
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP

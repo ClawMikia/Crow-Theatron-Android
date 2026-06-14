@@ -199,6 +199,9 @@ class PlayerActivity : AppCompatActivity() {
             window.insetsController?.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
         } else { @Suppress("DEPRECATION") window.navigationBarColor = Color.BLACK }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        
+        // Ensure mini players are gone and we have full video
+        applyLayoutState()
     }
 
     override fun onPause() { super.onPause(); persistProgress() }
@@ -228,29 +231,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onPictureInPictureModeChanged(isInPiPMode: Boolean, newConfig: android.content.res.Configuration) {
         super.onPictureInPictureModeChanged(isInPiPMode, newConfig)
-        if (isInPiPMode) {
-            binding.toolbar.visibility = View.GONE
-            binding.scrollView.visibility = View.GONE
-            binding.playerSurface.layoutParams = (binding.playerSurface.layoutParams as ViewGroup.MarginLayoutParams).apply {
-                height = ViewGroup.LayoutParams.MATCH_PARENT
-                topMargin = 0
-            }
-            // Move playerSurface to be the only thing in the ConstraintLayout
-            val constraints = androidx.constraintlayout.widget.ConstraintSet()
-            constraints.clone(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
-            constraints.connect(R.id.playerSurface, androidx.constraintlayout.widget.ConstraintSet.TOP, androidx.constraintlayout.widget.ConstraintSet.PARENT_ID, androidx.constraintlayout.widget.ConstraintSet.TOP)
-            constraints.applyTo(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
-        } else {
-            binding.toolbar.visibility = View.VISIBLE
-            binding.scrollView.visibility = View.VISIBLE
-            binding.playerSurface.layoutParams = (binding.playerSurface.layoutParams as ViewGroup.MarginLayoutParams).apply {
-                height = (220 * resources.displayMetrics.density).toInt()
-            }
-            val constraints = androidx.constraintlayout.widget.ConstraintSet()
-            constraints.clone(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
-            constraints.connect(R.id.playerSurface, androidx.constraintlayout.widget.ConstraintSet.TOP, R.id.toolbar, androidx.constraintlayout.widget.ConstraintSet.BOTTOM)
-            constraints.applyTo(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
-        }
+        applyLayoutState()
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { 
@@ -261,24 +242,35 @@ class PlayerActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        
+        // If we were in PiP, any new intent should ideally bring us back to full screen
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
+            // Starting the activity again usually exits PiP, but we'll ensure layout is refreshed
+        }
+
         val newId = intent.getLongExtra(EXTRA_VIDEO_ID, -1L)
         if (newId != -1L) {
-            val fresh = repo.getById(newId)
-            if (fresh != null) {
-                val wasSame = (newId == working.id)
-                working = fresh
-                currentSpeed = working.playbackSpeed.coerceIn(0.5f, 2.0f)
-                currentVolume = working.volumeLevel.coerceIn(0f, 1f)
-                chapters = repo.listChapters(working.id)
-                skips = repo.listSkips(working.id)
-                if (wasSame) {
-                    val startMs = working.trimStartMs.coerceAtLeast(0L)
-                    player?.seekTo(startMs)
-                    working = working.copy(positionMs = startMs)
-                }
+            val wasSame = (newId == working.id)
+            if (wasSame) {
+                // Just refresh UI and make sure it's playing, don't restart playback
                 bindUiFromWorking()
-                attachCurrentMedia(play = true)
+                applyLayoutState()
+                player?.play()
+            } else {
+                val fresh = repo.getById(newId)
+                if (fresh != null) {
+                    working = fresh
+                    currentSpeed = working.playbackSpeed.coerceIn(0.5f, 2.0f)
+                    currentVolume = working.volumeLevel.coerceIn(0f, 1f)
+                    chapters = repo.listChapters(working.id)
+                    skips = repo.listSkips(working.id)
+                    bindUiFromWorking()
+                    attachCurrentMedia(play = true)
+                    applyLayoutState()
+                }
             }
+        } else {
+            applyLayoutState()
         }
     }
 
@@ -992,19 +984,39 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun toggleFullscreen(enter: Boolean) {
         isFullscreen = enter
-        if (enter) {
+        applyLayoutState()
+    }
+
+    private fun applyLayoutState() {
+        val isInPiP = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode
+        
+        if (isInPiP) {
+            // In PiP mode, hide everything but the player
+            binding.toolbar.visibility = View.GONE
+            binding.scrollView.visibility = View.GONE
+            binding.fullscreenOverlay.visibility = View.GONE
+            binding.playerSurface.layoutParams = (binding.playerSurface.layoutParams as ViewGroup.MarginLayoutParams).apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+                topMargin = 0
+            }
+            val constraints = androidx.constraintlayout.widget.ConstraintSet()
+            constraints.clone(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
+            constraints.connect(R.id.playerSurface, androidx.constraintlayout.widget.ConstraintSet.TOP, androidx.constraintlayout.widget.ConstraintSet.PARENT_ID, androidx.constraintlayout.widget.ConstraintSet.TOP)
+            constraints.applyTo(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
+        } else if (isFullscreen) {
+            // Fullscreen mode
             val videoSize = player?.videoSize
             if (videoSize != null && videoSize.width > 0 && videoSize.height > 0) {
-                if (videoSize.height > videoSize.width) {
-                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                requestedOrientation = if (videoSize.height > videoSize.width) {
+                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
                 } else {
-                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                 }
-            } else {
-                if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                }
+            } else if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
+
             binding.fullscreenOverlay.visibility = View.VISIBLE
             binding.toolbar.visibility = View.GONE
             binding.scrollView.visibility = View.GONE
@@ -1013,12 +1025,18 @@ class PlayerActivity : AppCompatActivity() {
                 height = ViewGroup.LayoutParams.MATCH_PARENT
                 topMargin = 0
             }
+            val constraints = androidx.constraintlayout.widget.ConstraintSet()
+            constraints.clone(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
+            constraints.connect(R.id.playerSurface, androidx.constraintlayout.widget.ConstraintSet.TOP, androidx.constraintlayout.widget.ConstraintSet.PARENT_ID, androidx.constraintlayout.widget.ConstraintSet.TOP)
+            constraints.applyTo(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 window.insetsController?.hide(android.view.WindowInsets.Type.systemBars())
             } else {
                 @Suppress("DEPRECATION") window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             }
         } else {
+            // Normal mode
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             binding.fullscreenOverlay.visibility = View.GONE
             binding.toolbar.visibility = View.VISIBLE
@@ -1026,7 +1044,13 @@ class PlayerActivity : AppCompatActivity() {
             binding.playerSurface.layoutParams = (binding.playerSurface.layoutParams as ViewGroup.MarginLayoutParams).apply {
                 width = ViewGroup.LayoutParams.MATCH_PARENT
                 height = (220 * resources.displayMetrics.density).toInt()
+                topMargin = 0
             }
+            val constraints = androidx.constraintlayout.widget.ConstraintSet()
+            constraints.clone(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
+            constraints.connect(R.id.playerSurface, androidx.constraintlayout.widget.ConstraintSet.TOP, R.id.toolbar, androidx.constraintlayout.widget.ConstraintSet.BOTTOM)
+            constraints.applyTo(binding.root as androidx.constraintlayout.widget.ConstraintLayout)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 window.insetsController?.show(android.view.WindowInsets.Type.systemBars())
             } else {
