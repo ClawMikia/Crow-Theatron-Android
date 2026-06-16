@@ -43,8 +43,6 @@ data class VideoEntity(
     val subtitleBackgroundAlpha: Int = 128,
     // Orientation
     val preferredOrientation: Int = -1,
-    // Active profile
-    val activeProfileId: Long = 0L,
 ) {
     val contentUri: Uri get() = Uri.parse(uriString)
 

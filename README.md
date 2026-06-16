@@ -17,14 +17,14 @@
   - Toggleable UI panels for an unobstructed view.
 
 ### 🎨 Visual & Audio Suite
-- **Cyberpunk UI Aesthetic**: A dark-mode, high-contrast interface featuring the **Orbitron** font and neon color accents (Neon Pink, Cyan, Red, Green, Yellow).
+- **Cyberpunk UI Aesthetic**: A dark-mode interface featuring neon color accents (Neon Pink, Cyan, Red, Green, Yellow).
 - **Pitch / Key Adjustment**: Precision audio tuning from **-6 to +6 semitones**, allowing for real-time key shifting without affecting speed.
 - **Playback Speed**: Variable speed control from **0.5x to 2.0x** with quick reset capability.
 - **Advanced Volume Control**: Percentage-based volume adjustment with boost, mute, and a one-tap reset to 100%.
 - **Visual Enhancements**: Real-time post-processing filters selectable via a quick-access menu to improve clarity and style.
 
 ### ✂️ Timeline & Skip Management
-- **Precision Timeline Trim**: Interactive seekbars for setting **Start and End Points** with **±10s fine-tuning** buttons for frame-accurate focus.
+- **Precision Timeline Trim**: Interactive seekbars for setting **Start and End Points** with fine-tuning buttons for focus.
 - **Timeline Skips**: Define and manage specific segments to skip automatically during playback.
 - **Visual Skip Markers**: See your trim and skip segments directly on the playback seekbar.
 
@@ -38,13 +38,12 @@
 
 ## 🛠️ Technical Stack
 
-- **Language**: Kotlin 1.9+
-- **Platform**: Android 8.0 (API 26) - Android 15 (API 35/36)
+- **Language**: Kotlin 2.0+
+- **Platform**: Android 8.0 (API 26) - Android 15+ (API 36)
 - **Engine**: [Media3 ExoPlayer](https://developer.android.com/guide/topics/media/exoplayer)
-- **Database**: SQLite with custom **CrowDbHelper** for complex metadata and per-video state.
-- **UI Framework**: Android Material Components with **ConstraintLayout** and **CardView**-based modular design.
+- **Database**: SQLite with custom **CrowDbHelper** for metadata and per-video state.
+- **UI Framework**: Android Material Components with **ConstraintLayout** and **View Binding**.
 - **Concurrency**: Kotlin Coroutines for non-blocking file scanning and DB operations.
-- **Build System**: Gradle Kotlin DSL.
 
 ---
 
@@ -58,12 +57,12 @@ CrowTheatron/
 │   │   │   ├── data/           # SQLite schema, Models, and Repository
 │   │   │   ├── player/          # Video player implementation (ExoPlayer)
 │   │   │   ├── library/         # Library and playlist management
-│   │   │   ├── profile/         # Playback profiles and preferences
-│   │   │   └── ui/              # Custom views, animations, and System UI helpers
+│   │   │   ├── ui/              # Custom views and System UI helpers
+│   │   │   └── util/            # Media extraction and format utilities
 │   │   ├── res/
-│   │   │   ├── layout/          # XML layouts (Futuristic card-based UI)
-│   │   │   ├── drawable/        # Custom vector icons and neon-outline backgrounds
-│   │   │   └── values/          # Themes, Orbitron fonts, and "Crow" color palette
+│   │   │   ├── layout/          # XML layouts (Futuristic neon UI)
+│   │   │   ├── drawable/        # Custom vector icons and neon backgrounds
+│   │   │   └── values/          # Themes, colors, and Orbitron font definitions
 │   │   └── AndroidManifest.xml
 │   └── build.gradle.kts
 └── README.md
@@ -85,17 +84,6 @@ CrowTheatron/
     ```
 2.  **Open in Android Studio**: Wait for Gradle sync to complete.
 3.  **Run**: Deploy to a physical device or emulator running API 26 or higher.
-
----
-
-## 🎨 UI Highlights
-
-- **Crow Neon Theme**: A meticulously crafted color palette:
-  - `crow_accent_pink`: Primary actions and highlights.
-  - `crow_accent_cyan`: Volume and technical data.
-  - `crow_accent_green`: Pitch and audio state.
-  - `crow_accent_orange`: Speed and secondary controls.
-  - `crow_accent_red`: Alerts, trim end-points, and primary playback.
 
 ---
 

@@ -116,7 +116,6 @@ class CrowDbHelper(context: Context) :
             put(COL_SUB_BOLD, if (entity.subtitleBold) 1 else 0)
             put(COL_SUB_BG_ALPHA, entity.subtitleBackgroundAlpha)
             put(COL_ORIENTATION, entity.preferredOrientation)
-            put(COL_ACTIVE_PROFILE, entity.activeProfileId)
         }
         writableDatabase.update(TABLE_VIDEOS, cv, "$COL_ID = ?", arrayOf(entity.id.toString()))
     }
@@ -337,7 +336,6 @@ class CrowDbHelper(context: Context) :
         const val COL_SUB_BOLD          = "subtitle_bold"
         const val COL_SUB_BG_ALPHA      = "subtitle_bg_alpha"
         const val COL_ORIENTATION       = "preferred_orientation"
-        const val COL_ACTIVE_PROFILE    = "active_profile_id"
 
         private val CREATE_VIDEOS = """
             CREATE TABLE $TABLE_VIDEOS (
@@ -374,8 +372,7 @@ class CrowDbHelper(context: Context) :
                 $COL_SUB_SIZE REAL NOT NULL DEFAULT 16.0,
                 $COL_SUB_BOLD INTEGER NOT NULL DEFAULT 0,
                 $COL_SUB_BG_ALPHA INTEGER NOT NULL DEFAULT 128,
-                $COL_ORIENTATION INTEGER NOT NULL DEFAULT -1,
-                $COL_ACTIVE_PROFILE INTEGER NOT NULL DEFAULT 0
+                $COL_ORIENTATION INTEGER NOT NULL DEFAULT -1
             )
         """.trimIndent()
 
@@ -486,7 +483,6 @@ private fun VideoEntity.toContentValues(): ContentValues = ContentValues().apply
     put(CrowDbHelper.COL_SUB_BOLD,         if (subtitleBold) 1 else 0)
     put(CrowDbHelper.COL_SUB_BG_ALPHA,     subtitleBackgroundAlpha)
     put(CrowDbHelper.COL_ORIENTATION,      preferredOrientation)
-    put(CrowDbHelper.COL_ACTIVE_PROFILE,   activeProfileId)
 }
 
 private fun Cursor.toEntity(): VideoEntity {
@@ -535,7 +531,6 @@ private fun Cursor.toEntity(): VideoEntity {
         subtitleBold           = int(CrowDbHelper.COL_SUB_BOLD) == 1,
         subtitleBackgroundAlpha = int(CrowDbHelper.COL_SUB_BG_ALPHA, 128),
         preferredOrientation   = int(CrowDbHelper.COL_ORIENTATION, -1),
-        activeProfileId        = lng(CrowDbHelper.COL_ACTIVE_PROFILE),
     )
 }
 

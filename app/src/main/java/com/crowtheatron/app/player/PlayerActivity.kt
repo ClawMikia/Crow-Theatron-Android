@@ -45,7 +45,6 @@ import com.crowtheatron.app.databinding.ActivityPlayerBinding
 import com.crowtheatron.app.service.PlaybackService
 import com.crowtheatron.app.ui.setContentWithCrowInsets
 import com.crowtheatron.app.util.FormatUtils
-import com.crowtheatron.app.util.VideoEnhancement
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -1074,10 +1073,6 @@ class PlayerActivity : AppCompatActivity() {
         binding.fsControlPanels.visibility = if (isFsPanelsVisible) View.VISIBLE else View.GONE
         binding.btnToggleFsPanels.setImageResource(if (isFsPanelsVisible) android.R.drawable.ic_menu_view else android.R.drawable.ic_menu_upload) // upload looks like 'eye closed' sort of? No, let's use something else or just trust icons
         // Actually I'll use ic_menu_view for both or just toggle alpha
-    }
-
-    private fun enforceFullscreenLayout() {
-        toggleFullscreen(true)
     }
 
     private fun enterPiP() {
