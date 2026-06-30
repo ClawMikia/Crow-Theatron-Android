@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Crow Théatron</string>
-    <string name="splash_credit">Written by Christopher Lee Cajes</string>
+    <string name="splash_credit">Written by your friend in the future</string>
     <string name="nav_home">Home</string>
     <string name="nav_library">Library</string>
     <string name="nav_favorites">Favorites</string>

@@ -1,13 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-  IMPORTANT: This is a placeholder font descriptor.
-  Add the actual Orbitron TTF files to res/font/.
-  Download from: https://fonts.google.com/specimen/Orbitron
-  Place orbitron_regular.ttf and orbitron_bold.ttf in app/src/main/res/font/
--->
-<font-family xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
-    <font
-        app:fontStyle="normal"
-        app:fontWeight="700"
-        app:font="@font/orbitron_regular" />
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:fontProviderAuthority="com.google.android.gms.fonts"
+    app:fontProviderPackage="com.google.android.gms"
+    app:fontProviderQuery="name=Orbitron&amp;weight=700"
+    app:fontProviderCerts="@array/com_google_android_gms_fonts_certs">
 </font-family>
